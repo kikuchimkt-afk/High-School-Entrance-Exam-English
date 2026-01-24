@@ -1275,7 +1275,7 @@
             if (isLocal) {
                 // ローカル問題: 画像を表示. 静的モードならパス解決が必要
                 const resolveImgPath = (src) => {
-                    if (window.isStaticMode && src && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                    if (window.isStaticMode && src && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('./problems/')) {
                         return './problems/' + src;
                     }
                     return src;
