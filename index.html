@@ -154,6 +154,8 @@
                 </div>
             </div>
 
+
+
             <!-- フィルター (出題年度) -->
             <div class="mb-5">
                 <h3 class="text-md font-semibold mb-3 border-b pb-1">出題年度</h3>
@@ -162,10 +164,10 @@
                 </div>
             </div>
 
-            <!-- フィルター (出題月) -->
+            <!-- フィルター (出題県) -->
             <div class="mb-5">
-                <h3 class="text-md font-semibold mb-3 border-b pb-1">出題月</h3>
-                <div id="monthFilters" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                <h3 class="text-md font-semibold mb-3 border-b pb-1">出題県</h3>
+                <div id="prefectureFilters" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
                     <!-- チェックボックスはJSで生成 -->
                 </div>
             </div>
@@ -254,7 +256,9 @@
         let allGrades = new Set();
         let allTestTypes = new Set();
         let allYears = new Set();
-        let allMonths = new Set();
+        let allPrefectures = new Set();
+
+        const PREFECTURES_LIST = ["北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県", "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県", "岐阜県", "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県", "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"];
 
         // === IndexedDB初期化 ===
         function initDB() {
@@ -621,10 +625,16 @@
                         const imageUrls = [];
                         for (const imgName of problem.images) {
                             try {
-                                const imgHandle = await problemsDir.getFileHandle(imgName);
+                                const cleanName = imgName.split('/').pop(); // パスからファイル名のみ抽出
+                                const imgHandle = await problemsDir.getFileHandle(cleanName);
                                 const imgFile = await imgHandle.getFile();
                                 imageUrls.push(URL.createObjectURL(imgFile));
-                            } catch { }
+                            } catch {
+                                // ハンドルから読めない場合は元のパス(Relatve Path)を維持
+                                // これにより、FileSystemモードでも「ファイルが見つからない」場合に
+                                // サーバー上のパス(./problems/...)を参照できる可能性がある
+                                imageUrls.push(imgName);
+                            }
                         }
                         problem.images = imageUrls;
                     }
@@ -633,10 +643,13 @@
                         const expUrls = [];
                         for (const imgName of problem.explanationImages) {
                             try {
-                                const imgHandle = await problemsDir.getFileHandle(imgName);
+                                const cleanName = imgName.split('/').pop();
+                                const imgHandle = await problemsDir.getFileHandle(cleanName);
                                 const imgFile = await imgHandle.getFile();
                                 expUrls.push(URL.createObjectURL(imgFile));
-                            } catch { }
+                            } catch {
+                                expUrls.push(imgName);
+                            }
                         }
                         problem.explanationImages = expUrls;
                     }
@@ -646,16 +659,20 @@
                         const ansUrls = [];
                         for (const imgName of problem.answerImages) {
                             try {
-                                const imgHandle = await problemsDir.getFileHandle(imgName);
+                                const cleanName = imgName.split('/').pop();
+                                const imgHandle = await problemsDir.getFileHandle(cleanName);
                                 const imgFile = await imgHandle.getFile();
                                 ansUrls.push(URL.createObjectURL(imgFile));
-                            } catch { }
+                            } catch {
+                                ansUrls.push(imgName);
+                            }
                         }
                         problem.answerImages = ansUrls;
                         problem.answerImage = ansUrls[0]; // 互換性
                     } else if (problem.answerImage) {
                         try {
-                            const imgHandle = await problemsDir.getFileHandle(problem.answerImage);
+                            const cleanName = problem.answerImage.split('/').pop();
+                            const imgHandle = await problemsDir.getFileHandle(cleanName);
                             const imgFile = await imgHandle.getFile();
                             const url = URL.createObjectURL(imgFile);
                             problem.answerImage = url;
@@ -715,7 +732,8 @@
             allGrades = new Set();
             allTestTypes = new Set();
             allYears = new Set();
-            allMonths = new Set();
+            allYears = new Set();
+            allPrefectures = new Set();
 
             // 2. データの結合と再集計
             if (!localProblems) localProblems = []; // Safety check
@@ -727,7 +745,16 @@
                 splitAndAdd(doc.grade, allGrades);
                 if (doc.testType) allTestTypes.add(doc.testType);
                 if (doc.year) allYears.add(doc.year);
-                if (doc.month) allMonths.add(doc.month);
+                if (doc.year) allYears.add(doc.year);
+
+                // コメントから都道府県を抽出
+                if (doc.comment) {
+                    for (const pref of PREFECTURES_LIST) {
+                        if (doc.comment.includes(pref)) {
+                            allPrefectures.add(pref);
+                        }
+                    }
+                }
             });
 
             // 3. フィルタUIの更新
@@ -735,7 +762,7 @@
             populateFilters('unitFilters', allUnits);
             populateFilters('testTypeFilters', allTestTypes);
             populateFilters('yearFilters', allYears);
-            populateFilters('monthFilters', allMonths);
+            populateFilters('prefectureFilters', allPrefectures);
 
             // 4. 検索実行
             filterDocuments();
@@ -834,14 +861,13 @@
                 splitAndAdd(doc.grade, allGrades);
                 if (doc.testType) allTestTypes.add(doc.testType);
                 if (doc.year) allYears.add(doc.year);
-                if (doc.month) allMonths.add(doc.month);
             });
 
             populateFilters('gradeFilters', allGrades);
             populateFilters('unitFilters', allUnits);
             populateFilters('testTypeFilters', allTestTypes);
             populateFilters('yearFilters', allYears);
-            populateFilters('monthFilters', allMonths);
+            populateFilters('prefectureFilters', allPrefectures);
 
             // 検索ボタンとクリアボタンにイベントリスナーを設定
             document.getElementById('searchButton').addEventListener('click', filterDocuments);
@@ -1273,122 +1299,94 @@
             const detailViewer = document.getElementById('detailViewer');
 
             if (isLocal) {
-                // ローカル問題: 画像を表示. 静的モードならパス解決が必要
-                const resolveImgPath = (src) => {
+                // ローカル問題: 画像を表示.
+                // 静的モードならパス解決が必要。FileSystemモードならdirHandleから読み込む必要がある(外部フォルダの可能性があるため)
+
+                const resolveImgPath = async (src) => {
+                    // FileSystemモード（dirHandleあり）かつ、srcが文字列（パス）の場合
+                    if (window.isFileSystemMode && dirHandle && typeof src === 'string' && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('http')) {
+                        try {
+                            // ./problems/filename.png -> problems/filename.png -> filename.png
+                            // パスを分解してファイルハンドル取得
+                            const cleanPath = src.replace(/^\.\//, ''); // 先頭の ./ を削除
+                            const parts = cleanPath.split('/');
+                            // 実装簡略化: problemsフォルダ固定と仮定
+                            const filename = parts[parts.length - 1];
+                            const problemsDir = await dirHandle.getDirectoryHandle('problems');
+                            const fileHandle = await problemsDir.getFileHandle(filename);
+                            const file = await fileHandle.getFile();
+                            return URL.createObjectURL(file);
+                        } catch (e) {
+                            console.warn('Failed to load image from handle:', src, e);
+                            return src; // フォールバック: ハンドル読み込みに失敗した場合は元のパス(HTTP)を試す
+                        }
+                    }
+
+                    // Static Mode (Vercel / GitHub Pages)
                     if (window.isStaticMode && src && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('./problems/')) {
                         return './problems/' + src;
                     }
                     return src;
                 };
 
-                let imageHtml = '';
+                // 非同期表示のために即時実行関数でラップするか、Promise.allを使う
+                //innerHTMLへの代入を含むため、全体をasync関数として再構築する方が良いが、
+                //既存コードへの影響を最小限にするため、レンダリングロジック内で await する
 
-                // 配列(problemBlobs)がある場合 (IndexedDB)
-                if (doc.problemBlobs && doc.problemBlobs.length > 0) {
-                    imageHtml = doc.problemBlobs.map((blob, index) => {
-                        const imageUrl = URL.createObjectURL(blob);
-                        return `
-                        <div class="mb-4">
-                            <h5 class="font-medium text-gray-600 mb-1">ページ ${index + 1}</h5>
-                            <img src="${imageUrl}" alt="問題画像${index + 1}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')" title="クリックで拡大表示">
-                        </div>`;
-                    }).join('');
-                }
-                // 配列(images)がある場合 (FileSystem: Blob URL / Static Filename)
-                else if (doc.images && doc.images.length > 0) {
-                    imageHtml = doc.images.map((imgSrc, index) => {
-                        const imageUrl = resolveImgPath(imgSrc);
-                        return `
-                        <div class="mb-4">
-                            <h5 class="font-medium text-gray-600 mb-1">ページ ${index + 1}</h5>
-                            <img src="${imageUrl}" alt="問題画像${index + 1}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')" title="クリックで拡大表示">
-                        </div>`;
-                    }).join('');
-                }
-                // 旧データ(imageBlob)のみ (互換性維持)
-                else if (doc.imageBlob) {
-                    const imageUrl = URL.createObjectURL(doc.imageBlob);
-                    imageHtml = `<img src="${imageUrl}" alt="問題画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')" title="クリックで拡大表示">`;
-                } else {
-                    imageHtml = '<p class="text-gray-500 text-center py-4">問題画像がありません</p>';
-                }
+                (async () => {
+                    let problemsHtml = '';
+                    if (doc.problemBlobs && doc.problemBlobs.length > 0) {
+                        problemsHtml = doc.problemBlobs.map((blob, index) => {
+                            const imageUrl = URL.createObjectURL(blob);
+                            return `<div class="mb-4"><h5 class="font-medium text-gray-600 mb-1">ページ ${index + 1}</h5><img src="${imageUrl}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')"></div>`;
+                        }).join('');
+                    } else if (doc.images && doc.images.length > 0) {
+                        // Promise.allで並列ロード
+                        const htmlParts = await Promise.all(doc.images.map(async (src, index) => {
+                            const url = await resolveImgPath(src);
+                            return `<div class="mb-4"><h5 class="font-medium text-gray-600 mb-1">ページ ${index + 1}</h5><img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')"></div>`;
+                        }));
+                        problemsHtml = htmlParts.join('');
+                    } else if (doc.imageBlob) {
+                        const url = URL.createObjectURL(doc.imageBlob);
+                        problemsHtml = `<img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">`;
+                    } else {
+                        problemsHtml = '<p class="text-gray-500 text-center py-4">問題画像がありません</p>';
+                    }
 
-                // 解説画像
-                let explanationHtml = '';
-                // 配列(explanationBlobs)がある場合 (IndexedDB)
-                if (doc.explanationBlobs && doc.explanationBlobs.length > 0) {
-                    explanationHtml = doc.explanationBlobs.map(blob => {
-                        const url = URL.createObjectURL(blob);
-                        return `<div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4>
-                            <img src="${url}" alt="解説画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
-                        </div>`;
-                    }).join('');
-                }
-                // 配列(explanationImages)がある場合 (FileSystem / Static)
-                else if (doc.explanationImages && doc.explanationImages.length > 0) {
-                    explanationHtml = doc.explanationImages.map(src => {
-                        const url = resolveImgPath(src);
-                        return `<div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4>
-                            <img src="${url}" alt="解説画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
-                        </div>`;
-                    }).join('');
-                }
-                // 旧(explanationBlob)
-                else if (doc.explanationBlob) {
-                    const explanationUrl = URL.createObjectURL(doc.explanationBlob);
-                    explanationHtml = `
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4>
-                            <img src="${explanationUrl}" alt="解説画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${explanationUrl}', '_blank')" title="クリックで拡大表示">
-                        </div>
-                    `;
-                }
+                    let explanationHtml = '';
+                    if (doc.explanationBlobs && doc.explanationBlobs.length > 0) {
+                        explanationHtml = doc.explanationBlobs.map(blob => {
+                            const url = URL.createObjectURL(blob);
+                            return `<div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4><img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')"></div>`;
+                        }).join('');
+                    } else if (doc.explanationImages && doc.explanationImages.length > 0) {
+                        const htmlParts = await Promise.all(doc.explanationImages.map(async src => {
+                            const url = await resolveImgPath(src);
+                            return `<div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4><img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')"></div>`;
+                        }));
+                        explanationHtml = htmlParts.join('');
+                    }
 
-                // 解答画像
-                let answerHtml = '';
-                // 配列(answerBlobs)がある場合 (IndexedDB)
-                if (doc.answerBlobs && doc.answerBlobs.length > 0) {
-                    answerHtml = doc.answerBlobs.map((blob, index) => {
-                        const url = URL.createObjectURL(blob);
-                        return `<div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
-                            <img src="${url}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
-                        </div>`;
-                    }).join('');
-                }
-                // 配列(answerImages)がある場合 (FileSystem / Static)
-                else if (doc.answerImages && doc.answerImages.length > 0) {
-                    answerHtml = doc.answerImages.map(src => {
-                        const url = resolveImgPath(src);
-                        return `<div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
-                            <img src="${url}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
-                        </div>`;
-                    }).join('');
-                }
-                // 旧(answerBlob)
-                else if (doc.answerBlob) {
-                    const answerUrl = URL.createObjectURL(doc.answerBlob);
-                    answerHtml = `
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
-                            <img src="${answerUrl}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${answerUrl}', '_blank')" title="クリックで拡大表示">
-                        </div>
-                    `;
-                } else if (doc.answerImage) {
-                    // FileSystem or Static (URL) - needs resolution
-                    const finalUrl = resolveImgPath(doc.answerImage);
-                    answerHtml = `
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
-                            <img src="${finalUrl}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${finalUrl}', '_blank')" title="クリックで拡大表示">
-                        </div>
-                    `;
-                }
+                    let answerHtml = '';
+                    if (doc.answerBlobs && doc.answerBlobs.length > 0) {
+                        answerHtml = doc.answerBlobs.map((blob) => {
+                            const url = URL.createObjectURL(blob);
+                            return `<div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4><img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')"></div>`;
+                        }).join('');
+                    } else if (doc.answerImages && doc.answerImages.length > 0) {
+                        const htmlParts = await Promise.all(doc.answerImages.map(async src => {
+                            const url = await resolveImgPath(src);
+                            return `<div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4><img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')"></div>`;
+                        }));
+                        answerHtml = htmlParts.join('');
+                    } else if (doc.answerImage) {
+                        const url = await resolveImgPath(doc.answerImage);
+                        answerHtml = `<div class="mt-4 pt-4 border-t border-gray-200"><h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4><img src="${url}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')"></div>`;
+                    }
 
-                detailViewer.innerHTML = `
+                    // DOM更新
+                    detailViewer.innerHTML = `
                     <div class="mb-4 flex justify-between items-center">
                         <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">📷 ローカル登録問題</span>
                         <div class="flex gap-2">
@@ -1407,7 +1405,7 @@
                         </div>
                     </div>
                     
-                    ${imageHtml}
+                    ${problemsHtml}
                     ${explanationHtml}
                     ${answerHtml}
                     
@@ -1439,6 +1437,7 @@
                         </div>
                     </div>
                 `;
+                })(); // End async IIFE
 
             } else {
                 // 既存のPDF問題
@@ -1490,7 +1489,7 @@
             const selectedUnits = getSelectedFilters('unitFilters');
             const selectedTestTypes = getSelectedFilters('testTypeFilters'); // 追加
             const selectedYears = getSelectedFilters('yearFilters'); // 追加
-            const selectedMonths = getSelectedFilters('monthFilters'); // 追加
+            const selectedPrefectures = getSelectedFilters('prefectureFilters'); // 追加
 
             // フリーキーワードと検索モードを取得
             const keywordInput = document.getElementById('keywordInput').value.toLowerCase().trim();
@@ -1521,9 +1520,9 @@
                 // 追加フィルター
                 const matchesTestType = selectedTestTypes.length === 0 || (doc.testType && selectedTestTypes.includes(doc.testType));
                 const matchesYear = selectedYears.length === 0 || (doc.year && selectedYears.includes(String(doc.year)));
-                const matchesMonth = selectedMonths.length === 0 || (doc.month && selectedMonths.includes(String(doc.month)));
+                const matchesPrefecture = selectedPrefectures.length === 0 || (doc.comment && selectedPrefectures.some(pref => doc.comment.includes(pref)));
 
-                if (!matchesGrade || !matchesUnit || !matchesTestType || !matchesYear || !matchesMonth) {
+                if (!matchesGrade || !matchesUnit || !matchesTestType || !matchesYear || !matchesPrefecture) {
                     return false;
                 }
 
@@ -1541,8 +1540,7 @@
                     doc.comment || '', // コメントも検索対象に
                     doc.source_pdf || '',
                     doc.testType || '', // 問題種別も検索対象に
-                    String(doc.year || ''), // ローカル問題の出題年も検索対象に
-                    String(doc.month || '')
+                    String(doc.year || '') // ローカル問題の出題年も検索対象に
                 ].join(' ').toLowerCase();
 
                 // NOTキーワードのチェック (一つでも含まれていたら除外)
@@ -1623,7 +1621,7 @@
 
         // 全フィルターをクリアする
         function clearAllFilters() {
-            const filterContainers = ['gradeFilters', 'unitFilters', 'testTypeFilters', 'yearFilters', 'monthFilters'];
+            const filterContainers = ['gradeFilters', 'unitFilters', 'testTypeFilters', 'yearFilters', 'prefectureFilters'];
             filterContainers.forEach(containerId => {
                 const container = document.getElementById(containerId);
                 const inputs = container.querySelectorAll('input[type="checkbox"]');
