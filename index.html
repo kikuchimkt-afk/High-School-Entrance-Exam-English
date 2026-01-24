@@ -1,0 +1,2381 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高校入試英語問題検索</title>
+    <!-- Tailwind CSSを読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- pdf-lib を追加 -->
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <style>
+        /* Interフォントを読み込み */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+
+        /* カスタムスクロールバー */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c0c0c0;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
+        }
+
+        /* 検索結果カードのホバーエフェクト */
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .result-card.selected {
+            background-color: #c7d2fe !important;
+            /* bg-indigo-200 - より目立つ背景色 */
+            border-color: #4338ca !important;
+            /* border-indigo-700 */
+            border-left-width: 6px !important;
+            border-left-color: #4338ca !important;
+            box-shadow: 0 6px 20px rgba(67, 56, 202, 0.35) !important;
+            transform: scale(1.02) !important;
+            position: relative;
+            z-index: 10;
+        }
+
+        .result-card.selected::before {
+            content: '▶';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4338ca;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- フォルダ再接続バナー（権限が必要な場合に表示） -->
+    <div id="reconnectBanner" class="hidden bg-yellow-50 border-b border-yellow-200 px-4 py-3">
+        <div class="flex items-center justify-center gap-4 max-w-4xl mx-auto">
+            <div class="flex items-center gap-2">
+                <span class="text-yellow-600 text-xl">⚠️</span>
+                <span class="text-yellow-800 font-medium">ローカルフォルダへの接続が必要です</span>
+                <span id="reconnectFolderName" class="text-yellow-700 text-sm"></span>
+            </div>
+            <button id="reconnectBtn" onclick="requestFolderPermission()"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-1.5 rounded-lg font-semibold text-sm shadow transition-colors">
+                📁 フォルダに再接続
+            </button>
+        </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row h-screen">
+
+        <!-- 1. フィルター (左パネル) -->
+        <aside class="w-full md:w-1/4 xl:w-1/5 bg-white shadow-lg p-5 overflow-y-auto custom-scrollbar flex-shrink-0">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-indigo-700">検索フィルター</h2>
+                <button id="openSettingsBtn"
+                    class="text-gray-500 hover:text-indigo-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    title="設定">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- フリーキーワード検索 -->
+            <div class="mb-5">
+                <label for="keywordInput" class="block text-sm font-semibold mb-2">フリーキーワード検索:</label>
+                <input type="text" id="keywordInput" placeholder="例: 反射 音速 -鏡像"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="mt-2 text-xs text-gray-500">
+                    スペース区切りで複数検索。単語の前に `-` (ハイフン) で除外。
+                </div>
+            </div>
+
+            <!-- AND/OR 検索 -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold mb-2">検索モード:</label>
+                <div class="flex space-x-4">
+                    <label class="flex items-center">
+                        <input type="radio" name="searchMode" value="AND" class="form-radio text-indigo-600" checked>
+                        <span class="ml-2 text-sm">AND (すべて含む)</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="searchMode" value="OR" class="form-radio text-indigo-600">
+                        <span class="ml-2 text-sm">OR (いずれかを含む)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 検索実行ボタン -->
+            <div class="mb-5">
+                <button id="searchButton"
+                    class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-indigo-700 transition-colors">
+                    検索する
+                </button>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- クリアボタン -->
+            <button id="clearFiltersButton"
+                class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-semibold text-sm hover:bg-gray-300 transition-colors mb-4">
+                フィルター全クリア
+            </button>
+
+            <!-- フィルター (問題種別) -->
+            <div class="mb-5">
+                <h3 class="text-md font-semibold mb-3 border-b pb-1">問題種別</h3>
+                <div id="testTypeFilters" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- チェックボックスはJSで生成 -->
+                </div>
+            </div>
+
+            <!-- フィルター (出題年度) -->
+            <div class="mb-5">
+                <h3 class="text-md font-semibold mb-3 border-b pb-1">出題年度</h3>
+                <div id="yearFilters" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- チェックボックスはJSで生成 -->
+                </div>
+            </div>
+
+            <!-- フィルター (出題月) -->
+            <div class="mb-5">
+                <h3 class="text-md font-semibold mb-3 border-b pb-1">出題月</h3>
+                <div id="monthFilters" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- チェックボックスはJSで生成 -->
+                </div>
+            </div>
+
+            <!-- フィルター (履修学年) -->
+            <div class="mb-5">
+                <h3 class="text-md font-semibold mb-3 border-b pb-1">履修学年</h3>
+                <div id="gradeFilters" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- チェックボックスはJSで生成 -->
+                </div>
+            </div>
+
+            <!-- フィルター (単元) -->
+            <div class="mb-5">
+                <h3 class="text-md font-semibold mb-3 border-b pb-1">単元</h3>
+                <div id="unitFilters" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- チェックボックスはJSで生成 -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- 2. 検索結果 (中央パネル) -->
+        <main class="w-full md:w-1/2 xl:w-2/5 bg-gray-50 p-5 overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-900">高校入試英語問題検索</h1>
+                <a href="問題登録.html" id="registrationBtn"
+                    class="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-green-700 transition-colors text-sm">
+                    ＋ 問題登録
+                </a>
+            </div>
+            <div class="mb-4 flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    <span id="resultCount">0</span> 件の結果
+                    <span id="localCountBadge"
+                        class="hidden ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="folderStatusBadge"
+                        class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">未接続</span>
+                    <button id="connectFolderBtn" onclick="requestFolderPermission()"
+                        class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1">
+                        📁 フォルダに接続
+                    </button>
+                </div>
+            </div>
+            <div id="resultsContainer" class="space-y-4">
+                <!-- 検索結果はJSで生成 -->
+            </div>
+        </main>
+
+        <!-- 3. 詳細 (右パネル) -->
+        <section id="detailViewerContainer"
+            class="w-full md:w-1/4 xl:w-2/5 bg-white p-6 overflow-y-auto custom-scrollbar border-l border-gray-200">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">問題詳細</h2>
+            <div id="detailViewer" class="bg-white p-4 rounded-lg min-h-[200px] text-gray-600">
+                <p class="text-center">左のリストから問題を選択してください。</p>
+                <!-- 詳細はJSで生成 -->
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // === データ ===
+        // ご提供いただいた5件のサンプルデータ
+        // (キー名をJSで扱いやすい英語に変更しています)
+        const MOCK_ENGLISH_DATA = []; // ローカル（IndexedDB/FileSystem）から読み込んだ問題
+        let collectedProblemIds = new Set(); // コレクト機能用: 選択された問題ID
+
+        // === IndexedDB 設定 ===
+        const DB_NAME = '英語ProblemsDB';
+        const DB_VERSION = 5; // バージョン5: directoryHandles確実作成
+        const STORE_NAME = 'localProblems';
+        const HANDLE_STORE_NAME = 'directoryHandles'; // フォルダハンドル保存用
+        let db = null;
+
+        // === File System Access API 設定 ===
+        const PROBLEMS_DIR = 'problems';
+        let isFileSystemMode = false;
+        let dirHandle = null;
+        let localProblems = []; // ローカル問題データを保持
+        let selectedResultCard = null; // 選択中の検索結果カード
+
+        // === フィルター用セット ===
+        let allUnits = new Set();
+        let allGrades = new Set();
+        let allTestTypes = new Set();
+        let allYears = new Set();
+        let allMonths = new Set();
+
+        // === IndexedDB初期化 ===
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onblocked = () => {
+                    alert('データベースの更新がブロックされています。\nこのアプリの他のタブ（問題登録画面など）を開いている場合は、一度すべて閉じてからリロードしてください。');
+                    console.warn('initDB: Database upgrade blocked. Close other tabs.');
+                };
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    if (!database.objectStoreNames.contains(STORE_NAME)) {
+                        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        store.createIndex('year', 'year', { unique: false });
+                        store.createIndex('grade', 'grade', { unique: false });
+                    }
+                    // フォルダハンドル用ストア
+                    if (!database.objectStoreNames.contains(HANDLE_STORE_NAME)) {
+                        database.createObjectStore(HANDLE_STORE_NAME);
+                    }
+                };
+            });
+        }
+
+        // === フォルダハンドルを読み込み ===
+        async function loadDirectoryHandle() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([HANDLE_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(HANDLE_STORE_NAME);
+                const request = store.get('dataFolder');
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // === フォルダハンドルを保存 ===
+        async function saveDirectoryHandle(handle) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([HANDLE_STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(HANDLE_STORE_NAME);
+                const request = store.put(handle, 'dataFolder');
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // === フォルダ選択処理（UI更新のみ、保存はしない） ===
+        async function selectFolder() {
+            try {
+                const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                dirHandle = handle;
+                isFileSystemMode = true;
+
+                updateStorageStatus();
+                alert('フォルダを選択しました。「設定を保存」ボタンで保存してください。');
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.error('Folder selection error:', e);
+                    alert('フォルダ選択に失敗しました: ' + e.message);
+                }
+            }
+        }
+
+        // === 設定を保存 ===
+        async function saveSettings() {
+            try {
+                if (dirHandle) {
+                    await saveDirectoryHandle(dirHandle);
+
+                    // LocalStorageにもフォルダ名を保存（バックアップ）
+                    localStorage.setItem('savedFolderName', dirHandle.name);
+                    console.log('saveSettings: Folder name saved to LocalStorage:', dirHandle.name);
+
+                    alert('設定を保存しました！');
+
+                    // ローカル問題を再読み込み
+                    localProblems = await loadLocalProblems();
+                    reloadAllData();
+                } else {
+                    alert('フォルダを選択してください');
+                }
+            } catch (e) {
+                console.error('saveSettings error:', e);
+                alert('設定の保存に失敗しました: ' + e.message);
+            }
+        }
+
+        // === 保存済みフォルダハンドルの復元 ===
+        async function restoreDirectoryHandle() {
+            console.log('restoreDirectoryHandle: Starting...');
+            try {
+                const handle = await loadDirectoryHandle();
+                console.log('restoreDirectoryHandle: loadDirectoryHandle returned:', handle);
+
+                if (handle) {
+                    console.log('restoreDirectoryHandle: Handle found, checking permission...');
+                    const permission = await handle.queryPermission({ mode: 'readwrite' });
+                    console.log('restoreDirectoryHandle: Permission status:', permission);
+
+                    if (permission === 'granted') {
+                        dirHandle = handle;
+                        isFileSystemMode = true;
+                        console.log('restoreDirectoryHandle: Permission granted, mode set to FileSystem');
+                        updateStorageStatus();
+                        return true;
+                    } else {
+                        dirHandle = handle;
+                        isFileSystemMode = false;
+                        console.log('restoreDirectoryHandle: Permission not granted, showing pending status');
+                        updateStorageStatusPending();
+                        // 権限がない場合は再接続バナーを表示
+                        showReconnectBanner();
+                        return false;
+                    }
+                } else {
+                    // IndexedDBにハンドルがない場合、LocalStorageから前回のフォルダ名を取得
+                    const savedFolderName = localStorage.getItem('savedFolderName');
+                    if (savedFolderName) {
+                        console.log('restoreDirectoryHandle: No handle, but found saved folder name:', savedFolderName);
+                        updateStorageStatusPendingWithName(savedFolderName);
+                        // フォルダ名がある場合は再接続バナーを表示
+                        showReconnectBanner();
+                    }
+                    // フォルダ名がない場合（初回利用時）はバナーを表示しない
+                }
+            } catch (e) {
+                console.log('restoreDirectoryHandle: Error:', e);
+            }
+            return false;
+        }
+
+        // === ストレージ状態UI更新（権限待ち状態、フォルダ名あり） ===
+        function updateStorageStatusPending() {
+            const statusEl = document.getElementById('storageStatus');
+            const pathEl = document.getElementById('folderPathDisplay');
+
+            if (statusEl && dirHandle) {
+                statusEl.textContent = '要再接続';
+                statusEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm';
+                if (pathEl) pathEl.textContent = dirHandle.name + ' (フォルダを再選択してください)';
+            }
+        }
+
+        // === ストレージ状態UI更新（ハンドルなし、フォルダ名のみ） ===
+        function updateStorageStatusPendingWithName(folderName) {
+            const statusEl = document.getElementById('storageStatus');
+            const pathEl = document.getElementById('folderPathDisplay');
+
+            if (statusEl) {
+                statusEl.textContent = '要再接続';
+                statusEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm';
+                if (pathEl) pathEl.textContent = folderName + ' (フォルダを再選択してください)';
+            }
+        }
+
+        // === ストレージ状態UI更新 ===
+        function updateStorageStatus() {
+            const statusEl = document.getElementById('storageStatus');
+            const pathEl = document.getElementById('folderPathDisplay');
+
+            if (statusEl && isFileSystemMode && dirHandle) {
+                statusEl.textContent = 'ローカルフォルダ';
+                statusEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 shadow-sm';
+                if (pathEl) pathEl.textContent = dirHandle.name;
+            } else if (statusEl) {
+                // LocalStorageから前回のフォルダ名を取得して表示
+                const savedFolderName = localStorage.getItem('savedFolderName');
+                if (savedFolderName) {
+                    statusEl.textContent = '要再接続';
+                    statusEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm';
+                    if (pathEl) pathEl.textContent = savedFolderName + ' (フォルダを再選択)';
+                } else {
+                    statusEl.textContent = 'ブラウザ内保存';
+                    statusEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-white text-gray-600 border border-gray-200 shadow-sm';
+                    if (pathEl) pathEl.textContent = '未選択 (IndexedDB)';
+                }
+            }
+
+            // フォルダ接続状態バッジを更新
+            updateFolderStatusBadge();
+
+            // 権限取得後はバナーを非表示
+            hideReconnectBanner();
+        }
+
+        // === フォルダ接続状態バッジ更新 ===
+        function updateFolderStatusBadge() {
+            const badge = document.getElementById('folderStatusBadge');
+            const btn = document.getElementById('connectFolderBtn');
+
+            if (!badge) return;
+
+            if (isFileSystemMode && dirHandle) {
+                // 接続済み
+                badge.textContent = '✓ ' + dirHandle.name;
+                badge.className = 'text-xs px-2 py-1 rounded-full bg-green-100 text-green-700';
+                if (btn) {
+                    btn.textContent = '📁 再選択';
+                    btn.className = 'bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1';
+                }
+            } else {
+                // 未接続
+                badge.textContent = '未接続';
+                badge.className = 'text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500';
+                if (btn) {
+                    btn.textContent = '📁 フォルダに接続';
+                    btn.className = 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-1';
+                }
+            }
+        }
+
+        // === 再接続バナー表示 ===
+        function showReconnectBanner() {
+            const banner = document.getElementById('reconnectBanner');
+            const folderNameEl = document.getElementById('reconnectFolderName');
+            if (banner) {
+                banner.classList.remove('hidden');
+                // フォルダ名を表示
+                if (folderNameEl) {
+                    const name = dirHandle ? dirHandle.name : localStorage.getItem('savedFolderName');
+                    if (name) {
+                        folderNameEl.textContent = `(${name})`;
+                    }
+                }
+            }
+        }
+
+        // === 再接続バナー非表示 ===
+        function hideReconnectBanner() {
+            const banner = document.getElementById('reconnectBanner');
+            if (banner) {
+                banner.classList.add('hidden');
+            }
+        }
+
+        // === 権限再取得（ユーザークリックで呼び出し） ===
+        async function requestFolderPermission() {
+            try {
+                if (dirHandle) {
+                    // 既存のハンドルで権限を再要求
+                    const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
+                    if (permission === 'granted') {
+                        isFileSystemMode = true;
+                        hideReconnectBanner();
+                        updateStorageStatus();
+
+                        // ローカル問題を読み込み
+                        localProblems = await loadLocalProblems();
+                        reloadAllData();
+
+                        console.log('Permission granted, loaded', localProblems.length, 'local problems');
+                    }
+                } else {
+                    // ハンドルがない場合は新規選択
+                    await selectFolder();
+                    if (dirHandle) {
+                        await saveSettings();
+                        localProblems = await loadLocalProblems();
+                        reloadAllData();
+                    }
+                }
+            } catch (e) {
+                console.error('requestFolderPermission error:', e);
+                if (e.name !== 'AbortError') {
+                    alert('フォルダへの接続に失敗しました: ' + e.message);
+                }
+            }
+        }
+
+        // === 静的インデックス読み込み (改善版) ===
+        async function loadFromStaticIndex() {
+            try {
+                // FileSystemが有効な場合はそちらを優先
+                if (isFileSystemMode) return;
+
+                console.log('Attempting to load static index.json...');
+                const response = await fetch('./index.json');
+
+                if (!response.ok) {
+                    console.warn('Static index.json not found or not accessible (Status:', response.status, ').');
+                    // ステータスを更新してユーザーに知らせる
+                    const statusEl = document.getElementById('storageStatus');
+                    if (statusEl) statusEl.textContent = 'データなし (Static)';
+
+                    // ユーザーに通知 (デバッグ用だが重要)
+                    alert(`【未接続エラー】\nオンラインデータ(index.json)が見つかりません。\nステータス: ${response.status}\n\n1.「問題登録画面」で「Vercel用データ書き出し」を押しましたか？\n2. GitHubへプッシュしましたか？`);
+                    return;
+                }
+
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    localProblems = data;
+                    console.log('Loaded problems from static index.json:', localProblems.length);
+                    // 静的モードフラグ
+                    window.isStaticMode = true;
+
+                    // UI更新 (設定モーダル)
+                    const statusEl = document.getElementById('storageStatus');
+                    if (statusEl) {
+                        statusEl.textContent = 'オンラインデータ';
+                        statusEl.className = 'text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200 shadow-sm';
+                    }
+                    const pathEl = document.getElementById('folderPathDisplay');
+                    if (pathEl) pathEl.textContent = 'Read Only Mode';
+
+                    // UI更新 (メインヘッダー)
+                    const badge = document.getElementById('folderStatusBadge');
+                    if (badge) {
+                        badge.textContent = 'オンラインデータ';
+                        badge.className = 'text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700';
+                    }
+
+                    // 接続ボタンを隠す
+                    const connectBtn = document.getElementById('connectFolderBtn');
+                    if (connectBtn) connectBtn.style.display = 'none';
+
+                    // フォルダ接続ボタンを含む親要素を探して非表示にするなどの処理
+                    const buttons = document.querySelectorAll('button');
+                    buttons.forEach(btn => {
+                        if (btn.textContent.includes('フォルダに接続') || btn.textContent.includes('フォルダを選択') || btn.textContent.includes('再選択')) {
+                            // 設定モーダル内の「フォルダを選択」は隠さないほうがスムーズかもしれないが、
+                            // オンラインモードでローカル上書きを避ける意味では隠してもよい。
+                            // ここではメイン画面のボタンをターゲットにする ID指定のほうが安全だが、
+                            // 念のためクラス等で制御
+                            // 念のためクラス等で制御
+                            if (btn.id === 'connectFolderBtn' || (btn.parentElement && btn.parentElement.id === 'reconnectBanner')) {
+                                btn.style.display = 'none';
+                            }
+                        }
+                    });
+
+                    // 問題登録ボタンを隠す
+                    const regBtn = document.getElementById('registrationBtn');
+                    if (regBtn) regBtn.style.display = 'none';
+
+                } else {
+                    console.log('Static index.json is empty.');
+                    alert('【データ空】\nindex.jsonは読み込めましたが、データが空です。');
+                }
+            } catch (e) {
+                console.error('Failed to load static index:', e);
+                alert(`【読み込みエラー】\nデータの読み込み中にエラーが発生しました。\n${e.message}`);
+            }
+        }
+
+        // === ファイルシステムから全問題を読み込み ===
+        async function loadProblemsFromFileSystem() {
+            try {
+                const indexFile = await dirHandle.getFileHandle('index.json');
+                const file = await indexFile.getFile();
+                const text = await file.text();
+                const problems = JSON.parse(text || '[]');
+
+                const problemsDir = await dirHandle.getDirectoryHandle(PROBLEMS_DIR);
+
+                // 各問題の画像URLを生成
+                for (const problem of problems) {
+                    if (problem.images && problem.images.length > 0) {
+                        const imageUrls = [];
+                        for (const imgName of problem.images) {
+                            try {
+                                const imgHandle = await problemsDir.getFileHandle(imgName);
+                                const imgFile = await imgHandle.getFile();
+                                imageUrls.push(URL.createObjectURL(imgFile));
+                            } catch { }
+                        }
+                        problem.images = imageUrls;
+                    }
+
+                    if (problem.explanationImages && problem.explanationImages.length > 0) {
+                        const expUrls = [];
+                        for (const imgName of problem.explanationImages) {
+                            try {
+                                const imgHandle = await problemsDir.getFileHandle(imgName);
+                                const imgFile = await imgHandle.getFile();
+                                expUrls.push(URL.createObjectURL(imgFile));
+                            } catch { }
+                        }
+                        problem.explanationImages = expUrls;
+                    }
+
+                    // 解答画像 (複数)
+                    if (problem.answerImages && problem.answerImages.length > 0) {
+                        const ansUrls = [];
+                        for (const imgName of problem.answerImages) {
+                            try {
+                                const imgHandle = await problemsDir.getFileHandle(imgName);
+                                const imgFile = await imgHandle.getFile();
+                                ansUrls.push(URL.createObjectURL(imgFile));
+                            } catch { }
+                        }
+                        problem.answerImages = ansUrls;
+                        problem.answerImage = ansUrls[0]; // 互換性
+                    } else if (problem.answerImage) {
+                        try {
+                            const imgHandle = await problemsDir.getFileHandle(problem.answerImage);
+                            const imgFile = await imgHandle.getFile();
+                            const url = URL.createObjectURL(imgFile);
+                            problem.answerImage = url;
+                            problem.answerImages = [url]; // 互換性
+                        } catch { }
+                    }
+                }
+
+                return problems;
+            } catch (e) {
+                console.log('No index.json found or error reading:', e);
+                return [];
+            }
+        }
+
+        // === ローカル問題を読み込み ===
+        async function loadLocalProblems() {
+            console.log('loadLocalProblems: Starting...');
+
+            // ファイルシステムモードの場合
+            if (isFileSystemMode && dirHandle) {
+                console.log('loadLocalProblems: Using File System mode');
+                return await loadProblemsFromFileSystem();
+            }
+
+            // IndexedDBモード
+            if (!db) {
+                console.warn('loadLocalProblems: DB is null. Returning empty array.');
+                return [];
+            }
+            return new Promise((resolve, reject) => {
+                try {
+                    console.log(`loadLocalProblems: Accessing store '${STORE_NAME}'...`);
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        console.log(`loadLocalProblems: Success. Loaded ${request.result.length} items.`);
+                        resolve(request.result);
+                    };
+                    request.onerror = () => {
+                        console.error('loadLocalProblems: Request Error:', request.error);
+                        reject(request.error);
+                    };
+                } catch (err) {
+                    console.error('loadLocalProblems: Transaction Error:', err);
+                    reject(err);
+                }
+            });
+        }
+
+        // === データ再構築とリロード ===
+        function reloadAllData() {
+            console.log('reloadAllData: Starting...');
+            // 1. セットのリセット
+            allUnits = new Set();
+            allGrades = new Set();
+            allTestTypes = new Set();
+            allYears = new Set();
+            allMonths = new Set();
+
+            // 2. データの結合と再集計
+            if (!localProblems) localProblems = []; // Safety check
+            const allData = [...MOCK_ENGLISH_DATA, ...localProblems];
+            console.log(`reloadAllData: Combined data. Mock: ${MOCK_ENGLISH_DATA.length}, Local: ${localProblems.length}, Total: ${allData.length}`);
+
+            allData.forEach(doc => {
+                splitAndAdd(doc.unit, allUnits);
+                splitAndAdd(doc.grade, allGrades);
+                if (doc.testType) allTestTypes.add(doc.testType);
+                if (doc.year) allYears.add(doc.year);
+                if (doc.month) allMonths.add(doc.month);
+            });
+
+            // 3. フィルタUIの更新
+            populateFilters('gradeFilters', allGrades);
+            populateFilters('unitFilters', allUnits);
+            populateFilters('testTypeFilters', allTestTypes);
+            populateFilters('yearFilters', allYears);
+            populateFilters('monthFilters', allMonths);
+
+            // 4. 検索実行
+            filterDocuments();
+
+            // 5. ローカルバッジ更新
+            const badge = document.getElementById('localCountBadge');
+            if (badge) { // badgeが存在するか確認
+                if (localProblems.length > 0) {
+                    badge.textContent = `ローカル: ${localProblems.length}件`;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+
+        // === 初期化 ===
+        window.onload = async function () {
+            console.log('window.onload: Started.');
+
+            // IndexedDB初期化とローカル問題読み込み
+            // IndexedDB初期化とローカル問題読み込み
+            try {
+                console.log('window.onload: Initializing DB...');
+                await initDB();
+                console.log('window.onload: DB Initialized.');
+
+                // 保存済みフォルダハンドルを復元
+                await restoreDirectoryHandle();
+                updateStorageStatus();
+
+                // フォルダ選択ボタンのイベントリスナー（設定モーダル用）
+                const selectFolderBtn = document.getElementById('selectFolderBtn');
+                if (selectFolderBtn) {
+                    selectFolderBtn.addEventListener('click', selectFolder);
+                }
+
+                // 設定保存ボタンのイベントリスナー
+                const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+                if (saveSettingsBtn) {
+                    saveSettingsBtn.addEventListener('click', saveSettings);
+                }
+
+                // 設定モーダル制御
+                const settingsModal = document.getElementById('settingsModal');
+                const openSettingsBtn = document.getElementById('openSettingsBtn');
+                const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+
+                if (openSettingsBtn && settingsModal) {
+                    openSettingsBtn.addEventListener('click', () => settingsModal.showModal());
+                }
+                if (closeSettingsBtn && settingsModal) {
+                    closeSettingsBtn.addEventListener('click', () => settingsModal.close());
+                }
+                if (settingsModal) {
+                    settingsModal.addEventListener('click', (e) => {
+                        const rect = settingsModal.getBoundingClientRect();
+                        if (e.clientX < rect.left || e.clientX > rect.right ||
+                            e.clientY < rect.top || e.clientY > rect.bottom) {
+                            settingsModal.close();
+                        }
+                    });
+                }
+
+                // ローカル問題を読み込み
+                localProblems = await loadLocalProblems();
+                console.log('window.onload: Local problems loaded:', localProblems.length);
+
+                // もしローカル問題が0件なら、静的インデックス読み込みを試行 (Web版対応)
+                if (localProblems.length === 0 && !isFileSystemMode) {
+                    await loadFromStaticIndex();
+                }
+
+            } catch (e) {
+                console.error('IndexedDB初期化エラー:', e);
+                // エラーでも続行
+                localProblems = [];
+                // エラー時のフォールバックとしても静的読み込みを試行
+                await loadFromStaticIndex();
+            }
+
+            // データの前処理（ローカル問題も含める）
+            // reloadAllDataでやるのでここでは省略... 
+            // 元のコードではここでフィルタ構築していたが、reloadAllDataに集約したほうが安全かも。
+            // しかし、検索結果の初期表示のためには一度呼ぶ必要がある。
+            // 元のコードに合わせて実装します。
+
+            console.log('window.onload: Populating initial filters...');
+
+            // 削除済みサンプルデータをフィルタリング
+            filterDeletedSamples();
+
+            const allData = [...MOCK_ENGLISH_DATA, ...localProblems];
+            allData.forEach(doc => {
+                splitAndAdd(doc.unit, allUnits);
+                splitAndAdd(doc.grade, allGrades);
+                if (doc.testType) allTestTypes.add(doc.testType);
+                if (doc.year) allYears.add(doc.year);
+                if (doc.month) allMonths.add(doc.month);
+            });
+
+            populateFilters('gradeFilters', allGrades);
+            populateFilters('unitFilters', allUnits);
+            populateFilters('testTypeFilters', allTestTypes);
+            populateFilters('yearFilters', allYears);
+            populateFilters('monthFilters', allMonths);
+
+            // 検索ボタンとクリアボタンにイベントリスナーを設定
+            document.getElementById('searchButton').addEventListener('click', filterDocuments);
+            document.getElementById('clearFiltersButton').addEventListener('click', clearAllFilters);
+
+            // フリーキーワード入力時のリアルタイム検索
+            const keywordInputEl = document.getElementById('keywordInput');
+            if (keywordInputEl) {
+                keywordInputEl.addEventListener('input', () => {
+                    // 少し遅延させる（デバウンス）
+                    clearTimeout(keywordInputEl.timer);
+                    keywordInputEl.timer = setTimeout(filterDocuments, 300);
+                });
+                // Enterキーで即座に検索
+                keywordInputEl.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        clearTimeout(keywordInputEl.timer); // debounceTimerではなくkeywordInputEl.timerを使用
+                        filterDocuments();
+                    }
+                });
+            }
+            // selectFolderBtn リスナーは削除
+
+            // 初期表示
+            console.log('window.onload: Executing initial filterDocuments...');
+            filterDocuments();
+
+            // バッジ更新
+            const badge = document.getElementById('localCountBadge');
+            if (badge && localProblems.length > 0) {
+                badge.textContent = `ローカル: ${localProblems.length}件`;
+                badge.classList.remove('hidden');
+            }
+            console.log('window.onload: Completed.');
+        };
+
+        // === DOM操作関数 ===
+
+        // フィルターのチェックボックスを生成する
+        function populateFilters(containerId, itemsSet) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = ''; // コンテナをクリア
+            const sortedItems = Array.from(itemsSet).sort(); // 昇順ソート
+
+            sortedItems.forEach(item => {
+                if (!item) return; // 空のアイテムは無視
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                div.innerHTML = `
+                    <input type="checkbox" id="chk_${containerId}_${item}" value="${item}" class="form-checkbox h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                    <label for="chk_${containerId}_${item}" class="ml-2 text-sm text-gray-700">${item}</label>
+                `;
+                container.appendChild(div);
+
+                // チェックボックス変更時にリアルタイム検索
+                const checkbox = div.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.addEventListener('change', filterDocuments);
+                }
+            });
+        }
+
+        // 検索結果を描画する
+        function renderResults(results) {
+            const container = document.getElementById('resultsContainer');
+            const countEl = document.getElementById('resultCount');
+            container.innerHTML = ''; // 既存の結果をクリア
+            countEl.textContent = results.length;
+
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">検索条件に一致する問題が見つかりませんでした。</p>';
+                return;
+            }
+
+            results.forEach(doc => {
+                const isLocal = doc.id.startsWith('LOCAL');
+                const isCollected = collectedProblemIds.has(doc.id);
+                const item = document.createElement('div');
+                item.className = `result-card bg-white p-4 rounded-lg border shadow-sm transition-all duration-200 cursor-pointer ${isCollected ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-gray-200 hover:border-indigo-300'}`;
+                item.onclick = (e) => {
+                    // チェックボックスのクリックはバブリングでここに来るが、
+                    // カード自体のクリックで詳細表示したい場合と、チェックボックスで選択したい場合を分ける
+                    if (e.target.type === 'checkbox' || e.target.closest('.collection-checkbox')) {
+                        return; // チェックボックス操作は個別のハンドラに任せる
+                    }
+                    viewDetails(doc.id, item);
+                };
+
+                item.innerHTML = `
+                     <div class="flex justify-between items-start mb-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-medium">${doc.id}</span>
+                            ${doc.testType ? `<span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">${doc.testType}</span>` : ''}
+                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">${doc.year || '不明'}年度${doc.month ? doc.month + '月' : ''}</span>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">${doc.grade}年</span>
+                            ${isLocal ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Local</span>' : ''}
+                        </div>
+                        <div class="collection-checkbox" onclick="toggleCollection('${doc.id}', event)">
+                            <input type="checkbox" ${isCollected ? 'checked' : ''} class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-bold text-gray-800 mb-2 line-clamp-2">${doc.unit}</h3>
+                    
+                    <div class="mb-2">
+                         <p class="text-sm text-gray-600 line-clamp-2">${doc.keywords || 'キーワードなし'}</p>
+                    </div>
+
+                    ${doc.source_pdf ? `<p class="text-xs text-gray-500 mt-2 truncate">📄 ${doc.source_pdf}</p>` : ''}
+                `;
+                container.appendChild(item);
+            });
+
+            updateFloatingBar();
+        }
+
+        // === コレクト機能: 選択切り替え ===
+        function toggleCollection(id, event) {
+            event.stopPropagation(); // 詳細表示の発火を防ぐ
+
+            if (collectedProblemIds.has(id)) {
+                collectedProblemIds.delete(id);
+            } else {
+                collectedProblemIds.add(id);
+            }
+
+            // 現在の検索結果の表示を更新（スタイル適用のため）
+            // 全再描画は重いかもしれないが、件数が少なければ許容範囲
+            // 最適化するならDOM要素を特定してクラスを付け替える
+            const cards = document.querySelectorAll('.result-card');
+            // IDで特定するのは難しいので、単純にrenderResultsを再呼出しせず、DOM走査で更新
+            // 今回はシンプルに再検索（現在の条件で）でリストを更新するのが確実だが、スクロール位置がリセットされる
+            // なので、event.targetからDOMを辿ってスタイル更新する
+
+            const card = event.target.closest('.result-card');
+            const checkbox = card.querySelector('input[type="checkbox"]');
+
+            if (collectedProblemIds.has(id)) {
+                card.classList.remove('border-gray-200', 'hover:border-indigo-300');
+                card.classList.add('border-indigo-500', 'bg-indigo-50', 'ring-1', 'ring-indigo-500');
+                checkbox.checked = true;
+            } else {
+                card.classList.add('border-gray-200', 'hover:border-indigo-300');
+                card.classList.remove('border-indigo-500', 'bg-indigo-50', 'ring-1', 'ring-indigo-500');
+                checkbox.checked = false;
+            }
+
+            updateFloatingBar();
+        }
+
+        // === コレクト機能: フローティングバー更新 ===
+        function updateFloatingBar() {
+            let bar = document.getElementById('collectionFloatingBar');
+            if (!bar) {
+                // バーを作成
+                bar = document.createElement('div');
+                bar.id = 'collectionFloatingBar';
+                bar.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-4 z-50 transition-all duration-300 translate-y-24';
+                bar.innerHTML = `
+                    <span id="collectionCount" class="font-bold">0件を選択中</span>
+                    <button onclick="generateCollectedPDF()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors">
+                        一括PDF作成
+                    </button>
+                    ${window.isStaticMode ? '' : `
+                    <button onclick="deleteSelectedProblems()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors">
+                        🗑️ 選択削除
+                    </button>`}
+                    <button onclick="clearCollection()" class="text-gray-400 hover:text-white text-sm">
+                        解除
+                    </button>
+                `;
+                document.body.appendChild(bar);
+            }
+
+            const countSpan = document.getElementById('collectionCount');
+            countSpan.textContent = `${collectedProblemIds.size}件を選択中`;
+
+            if (collectedProblemIds.size > 0) {
+                bar.classList.remove('translate-y-24');
+            } else {
+                bar.classList.add('translate-y-24');
+            }
+        }
+
+        // === コレクト機能: 全解除 ===
+        function clearCollection() {
+            collectedProblemIds.clear();
+            // 見えているカードのスタイルをリセット
+            const cards = document.querySelectorAll('.result-card');
+            cards.forEach(card => {
+                card.classList.add('border-gray-200', 'hover:border-indigo-300');
+                card.classList.remove('border-indigo-500', 'bg-indigo-50', 'ring-1', 'ring-indigo-500');
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = false;
+            });
+
+            updateFloatingBar();
+        }
+
+        // === 削除機能: 個別削除 ===
+        async function deleteProblem(id) {
+            // 確認ダイアログ
+            const isLocal = id.startsWith('LOCAL');
+            let confirmMessage = `問題 ${id} を削除しますか？\nこの操作は取り消せません。`;
+            if (!isLocal) {
+                confirmMessage += '\n\n※サンプルデータの削除は永続的に保存されます。';
+            }
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                await deleteProblemById(id);
+                alert(`問題 ${id} を削除しました。`);
+
+                // 選択状態から削除
+                collectedProblemIds.delete(id);
+
+                // ローカル問題の再読み込みとUI更新
+                localProblems = await loadLocalProblems();
+                reloadAllData();
+                updateFloatingBar();
+
+                // 詳細ビューをクリア
+                document.getElementById('detailViewer').innerHTML = '<p class="text-center text-gray-600">左のリストから問題を選択してください。</p>';
+            } catch (e) {
+                console.error('Delete error:', e);
+                alert('削除に失敗しました: ' + e.message);
+            }
+        }
+
+        // === 削除機能: 一括削除 ===
+        async function deleteSelectedProblems() {
+            if (collectedProblemIds.size === 0) return;
+
+            const ids = Array.from(collectedProblemIds);
+            const localIds = ids.filter(id => id.startsWith('LOCAL'));
+            const sampleIds = ids.filter(id => !id.startsWith('LOCAL'));
+
+            let confirmMessage = `${ids.length}件の問題を削除しますか？\nこの操作は取り消せません。`;
+            if (sampleIds.length > 0) {
+                confirmMessage += `\n\n※ ${sampleIds.length}件のサンプルデータの削除は永続的に保存されます。`;
+            }
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const id of ids) {
+                    try {
+                        await deleteProblemById(id);
+                        collectedProblemIds.delete(id);
+                        successCount++;
+                    } catch (e) {
+                        console.error(`Failed to delete ${id}:`, e);
+                        errorCount++;
+                    }
+                }
+
+                if (errorCount > 0) {
+                    alert(`${successCount}件を削除しました。\n${errorCount}件の削除に失敗しました。`);
+                } else {
+                    alert(`${successCount}件を削除しました。`);
+                }
+
+                // ローカル問題の再読み込みとUI更新
+                localProblems = await loadLocalProblems();
+                reloadAllData();
+                updateFloatingBar();
+
+                // 詳細ビューをクリア
+                document.getElementById('detailViewer').innerHTML = '<p class="text-center text-gray-600">左のリストから問題を選択してください。</p>';
+            } catch (e) {
+                console.error('Bulk delete error:', e);
+                alert('削除処理中にエラーが発生しました: ' + e.message);
+            }
+        }
+
+        // === 削除機能: 実際の削除処理 ===
+        async function deleteProblemById(id) {
+            const isLocal = id.startsWith('LOCAL');
+
+            if (isLocal) {
+                // ローカル問題の削除
+                if (isFileSystemMode && dirHandle) {
+                    // FileSystem モードの場合
+                    const indexFile = await dirHandle.getFileHandle('index.json');
+                    const file = await indexFile.getFile();
+                    const text = await file.text();
+                    let problems = JSON.parse(text || '[]');
+
+                    const problemToDelete = problems.find(p => p.id === id);
+                    if (!problemToDelete) {
+                        throw new Error('問題が見つかりません');
+                    }
+
+                    // 画像ファイルを削除
+                    const problemsDir = await dirHandle.getDirectoryHandle(PROBLEMS_DIR);
+                    const filesToDelete = [];
+                    if (problemToDelete.images) filesToDelete.push(...problemToDelete.images);
+                    if (problemToDelete.explanationImages) filesToDelete.push(...problemToDelete.explanationImages);
+                    if (problemToDelete.answerImage) filesToDelete.push(problemToDelete.answerImage);
+
+                    for (const fileName of filesToDelete) {
+                        try {
+                            await problemsDir.removeEntry(fileName);
+                            console.log('Deleted file:', fileName);
+                        } catch (e) {
+                            console.warn('Failed to delete file:', fileName, e);
+                        }
+                    }
+
+                    // index.json を更新
+                    problems = problems.filter(p => p.id !== id);
+                    const writable = await indexFile.createWritable();
+                    await writable.write(JSON.stringify(problems, null, 2));
+                    await writable.close();
+                } else {
+                    // IndexedDB モードの場合
+                    if (!db) throw new Error('Database not initialized');
+
+                    return new Promise((resolve, reject) => {
+                        const transaction = db.transaction([STORE_NAME], 'readwrite');
+                        const store = transaction.objectStore(STORE_NAME);
+                        const request = store.delete(id);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+            } else {
+                // サンプルデータの削除 (MOCK_ENGLISH_DATA)
+                // localStorage に削除済みIDを保存
+                const deletedIds = getDeletedSampleIds();
+                deletedIds.add(id);
+                saveDeletedSampleIds(deletedIds);
+
+                // メモリ上の配列からも削除
+                const index = MOCK_ENGLISH_DATA.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    MOCK_ENGLISH_DATA.splice(index, 1);
+                }
+            }
+        }
+
+        // === 削除済みサンプルID管理 ===
+        function getDeletedSampleIds() {
+            try {
+                const stored = localStorage.getItem('deletedSampleIds');
+                return stored ? new Set(JSON.parse(stored)) : new Set();
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function saveDeletedSampleIds(ids) {
+            localStorage.setItem('deletedSampleIds', JSON.stringify(Array.from(ids)));
+        }
+
+        function filterDeletedSamples() {
+            const deletedIds = getDeletedSampleIds();
+            if (deletedIds.size > 0) {
+                // MOCK_ENGLISH_DATA から削除済みIDをフィルタ
+                for (let i = MOCK_ENGLISH_DATA.length - 1; i >= 0; i--) {
+                    if (deletedIds.has(MOCK_ENGLISH_DATA[i].id)) {
+                        MOCK_ENGLISH_DATA.splice(i, 1);
+                    }
+                }
+                console.log(`Filtered ${deletedIds.size} deleted sample(s) from MOCK_ENGLISH_DATA`);
+            }
+        }
+
+
+
+        // === ヘルパー: 画像を指定領域にフィットさせて描画 ===
+        function drawImageFit(doc, imgObj, x, y, maxWidth, maxHeight, alignY = 'center') {
+            const img = imgObj.img;
+            const fmt = imgObj.fmt;
+            const ratio = img.width / img.height;
+
+            let drawW = maxWidth;
+            let drawH = drawW / ratio;
+
+            if (drawH > maxHeight) {
+                drawH = maxHeight;
+                drawW = drawH * ratio;
+            }
+
+            // X軸は常に中央寄せ
+            const drawX = x + (maxWidth - drawW) / 2;
+
+            // Y軸は指定により変更
+            let drawY = y;
+            if (alignY === 'center') {
+                drawY = y + (maxHeight - drawH) / 2;
+            }
+            // 'top' の場合は y そのまま
+
+            doc.addImage(img, fmt, drawX, drawY, drawW, drawH);
+        }
+
+
+
+
+
+        // === 詳細表示 ===
+        function viewDetails(docId, cardElement) {
+            // ローカル問題かMOCK_DATAから検索
+            let doc = MOCK_ENGLISH_DATA.find(d => d.id === docId);
+            const isLocal = docId.startsWith('LOCAL');
+            if (isLocal) {
+                doc = localProblems.find(d => d.id === docId);
+            }
+            if (!doc) return;
+
+            // 選択中のカードのスタイルを更新
+            if (selectedResultCard) {
+                selectedResultCard.classList.remove('selected');
+            }
+            if (cardElement) {
+                cardElement.classList.add('selected');
+                selectedResultCard = cardElement;
+            }
+
+            const detailViewer = document.getElementById('detailViewer');
+
+            if (isLocal) {
+                // ローカル問題: 画像を表示. 静的モードならパス解決が必要
+                const resolveImgPath = (src) => {
+                    if (window.isStaticMode && src && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                        return './problems/' + src;
+                    }
+                    return src;
+                };
+
+                let imageHtml = '';
+
+                // 配列(problemBlobs)がある場合 (IndexedDB)
+                if (doc.problemBlobs && doc.problemBlobs.length > 0) {
+                    imageHtml = doc.problemBlobs.map((blob, index) => {
+                        const imageUrl = URL.createObjectURL(blob);
+                        return `
+                        <div class="mb-4">
+                            <h5 class="font-medium text-gray-600 mb-1">ページ ${index + 1}</h5>
+                            <img src="${imageUrl}" alt="問題画像${index + 1}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')" title="クリックで拡大表示">
+                        </div>`;
+                    }).join('');
+                }
+                // 配列(images)がある場合 (FileSystem: Blob URL / Static Filename)
+                else if (doc.images && doc.images.length > 0) {
+                    imageHtml = doc.images.map((imgSrc, index) => {
+                        const imageUrl = resolveImgPath(imgSrc);
+                        return `
+                        <div class="mb-4">
+                            <h5 class="font-medium text-gray-600 mb-1">ページ ${index + 1}</h5>
+                            <img src="${imageUrl}" alt="問題画像${index + 1}" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')" title="クリックで拡大表示">
+                        </div>`;
+                    }).join('');
+                }
+                // 旧データ(imageBlob)のみ (互換性維持)
+                else if (doc.imageBlob) {
+                    const imageUrl = URL.createObjectURL(doc.imageBlob);
+                    imageHtml = `<img src="${imageUrl}" alt="問題画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${imageUrl}', '_blank')" title="クリックで拡大表示">`;
+                } else {
+                    imageHtml = '<p class="text-gray-500 text-center py-4">問題画像がありません</p>';
+                }
+
+                // 解説画像
+                let explanationHtml = '';
+                // 配列(explanationBlobs)がある場合 (IndexedDB)
+                if (doc.explanationBlobs && doc.explanationBlobs.length > 0) {
+                    explanationHtml = doc.explanationBlobs.map(blob => {
+                        const url = URL.createObjectURL(blob);
+                        return `<div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4>
+                            <img src="${url}" alt="解説画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
+                        </div>`;
+                    }).join('');
+                }
+                // 配列(explanationImages)がある場合 (FileSystem / Static)
+                else if (doc.explanationImages && doc.explanationImages.length > 0) {
+                    explanationHtml = doc.explanationImages.map(src => {
+                        const url = resolveImgPath(src);
+                        return `<div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4>
+                            <img src="${url}" alt="解説画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
+                        </div>`;
+                    }).join('');
+                }
+                // 旧(explanationBlob)
+                else if (doc.explanationBlob) {
+                    const explanationUrl = URL.createObjectURL(doc.explanationBlob);
+                    explanationHtml = `
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">📝 解説</h4>
+                            <img src="${explanationUrl}" alt="解説画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${explanationUrl}', '_blank')" title="クリックで拡大表示">
+                        </div>
+                    `;
+                }
+
+                // 解答画像
+                let answerHtml = '';
+                // 配列(answerBlobs)がある場合 (IndexedDB)
+                if (doc.answerBlobs && doc.answerBlobs.length > 0) {
+                    answerHtml = doc.answerBlobs.map((blob, index) => {
+                        const url = URL.createObjectURL(blob);
+                        return `<div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
+                            <img src="${url}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
+                        </div>`;
+                    }).join('');
+                }
+                // 配列(answerImages)がある場合 (FileSystem / Static)
+                else if (doc.answerImages && doc.answerImages.length > 0) {
+                    answerHtml = doc.answerImages.map(src => {
+                        const url = resolveImgPath(src);
+                        return `<div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
+                            <img src="${url}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${url}', '_blank')">
+                        </div>`;
+                    }).join('');
+                }
+                // 旧(answerBlob)
+                else if (doc.answerBlob) {
+                    const answerUrl = URL.createObjectURL(doc.answerBlob);
+                    answerHtml = `
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
+                            <img src="${answerUrl}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${answerUrl}', '_blank')" title="クリックで拡大表示">
+                        </div>
+                    `;
+                } else if (doc.answerImage) {
+                    // FileSystem or Static (URL) - needs resolution
+                    const finalUrl = resolveImgPath(doc.answerImage);
+                    answerHtml = `
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-2">✅ 解答</h4>
+                            <img src="${finalUrl}" alt="解答画像" class="w-full rounded-lg shadow-md cursor-pointer" onclick="window.open('${finalUrl}', '_blank')" title="クリックで拡大表示">
+                        </div>
+                    `;
+                }
+
+                detailViewer.innerHTML = `
+                    <div class="mb-4 flex justify-between items-center">
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">📷 ローカル登録問題</span>
+                        <div class="flex gap-2">
+                            ${window.isStaticMode ? '' : `
+                            <a href="問題登録.html?edit=${doc.id}" target="_blank" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors shadow-sm flex items-center gap-2">
+                                ✏️ 編集
+                            </a>`}
+                            <button onclick="generateSinglePDF('${doc.id}')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                PDF作成
+                            </button>
+                            ${window.isStaticMode ? '' : `
+                            <button onclick="deleteProblem('${doc.id}')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2">
+                                🗑️ 削除
+                            </button>`}
+                        </div>
+                    </div>
+                    
+                    ${imageHtml}
+                    ${explanationHtml}
+                    ${answerHtml}
+                    
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${doc.id}: ${doc.unit}</h3>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <span class="font-semibold text-gray-600">出題年度:</span>
+                                <span class="text-gray-800">${doc.year}年度</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-gray-600">履修学年:</span>
+                                <span class="text-gray-800">${doc.grade}</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-gray-600">想定ページ数:</span>
+                                <span class="text-gray-800">${doc.pageCount || '1'}ページ</span>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-gray-600">単元:</span>
+                                <span class="text-gray-800">${doc.unit}</span>
+                            </div>
+                            <hr class="my-2">
+                            <div>
+                                <span class="font-semibold text-gray-600">キーワード:</span>
+                                <p class="text-gray-800 mt-1 text-sm">${doc.keywords || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            } else {
+                // 既存のPDF問題
+                const pdfPath = `./pdfs/${doc.source_pdf}`;
+
+                detailViewer.innerHTML = `
+                    <div class="mb-4">
+                        <a href="${pdfPath}" target="_blank" class="block w-full text-center bg-green-600 text-white py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-green-700 transition-colors mb-2">
+                            [問題] PDFを別ウィンドウで開く
+                        </a>
+                        <div class="w-full h-[600px] border border-gray-300 rounded-lg bg-gray-100 overflow-hidden">
+                            <iframe src="${pdfPath}" class="w-full h-full" title="PDF Preview">
+                                <p>お使いのブラウザはPDFの埋め込み表示をサポートしていません。<a href="${pdfPath}">こちら</a>からダウンロードしてください。</p>
+                            </iframe>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">${doc.id}: ${doc.unit}</h3>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <span class="font-semibold text-gray-600">履修学年:</span>
+                            <span class="text-gray-800">${doc.grade}</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-600">単元:</span>
+                            <span class="text-gray-800">${doc.unit}</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-600">PDFソース:</span>
+                            <span class="text-gray-800 text-sm break-all">${doc.source_pdf}</span>
+                        </div>
+                        <hr class="my-2">
+                        <div>
+                            <span class="font-semibold text-gray-600">キーワード:</span>
+                            <p class="text-gray-800 mt-1 text-sm">${doc.keywords || 'N/A'}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // === 検索ロジック ===
+
+        // メインの検索実行関数
+        function filterDocuments() {
+            // 選択されたフィルターを取得
+            const selectedGrades = getSelectedFilters('gradeFilters');
+            const selectedUnits = getSelectedFilters('unitFilters');
+            const selectedTestTypes = getSelectedFilters('testTypeFilters'); // 追加
+            const selectedYears = getSelectedFilters('yearFilters'); // 追加
+            const selectedMonths = getSelectedFilters('monthFilters'); // 追加
+
+            // フリーキーワードと検索モードを取得
+            const keywordInput = document.getElementById('keywordInput').value.toLowerCase().trim();
+            const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+
+            // キーワードをパース (NOT検索 `- ` にも対応) - 全角スペースにも対応
+            const keywords = [];
+            const notKeywords = [];
+            keywordInput.split(/[\s\u3000]+/).forEach(term => {  // 半角・全角スペース両対応
+                if (term.startsWith('-') && term.length > 1) {
+                    notKeywords.push(term.substring(1));
+                } else if (term) {
+                    keywords.push(term);
+                }
+            });
+
+            console.log('filterDocuments: keywordInput=', keywordInput, ', keywords=', keywords, ', searchMode=', searchMode);
+
+            // 全データ（既存 + ローカル）をフィルタリング
+            const allData = [...MOCK_SCIENCE_DATA, ...localProblems];
+            console.log('filterDocuments: allData count=', allData.length);
+
+            const filteredResults = allData.filter(doc => {
+                // 1. チェックボックスフィルター (AND条件)
+                const matchesGrade = selectedGrades.length === 0 || arrayContainsAll(doc.grade, selectedGrades);
+                const matchesUnit = selectedUnits.length === 0 || arrayContainsAll(doc.unit, selectedUnits);
+
+                // 追加フィルター
+                const matchesTestType = selectedTestTypes.length === 0 || (doc.testType && selectedTestTypes.includes(doc.testType));
+                const matchesYear = selectedYears.length === 0 || (doc.year && selectedYears.includes(String(doc.year)));
+                const matchesMonth = selectedMonths.length === 0 || (doc.month && selectedMonths.includes(String(doc.month)));
+
+                if (!matchesGrade || !matchesUnit || !matchesTestType || !matchesYear || !matchesMonth) {
+                    return false;
+                }
+
+                // 2. フリーキーワードフィルター
+                if (keywords.length === 0 && notKeywords.length === 0) {
+                    return true; // キーワード入力がない場合は通過
+                }
+
+                // 検索対象の全テキストを結合 (キーワードも検索対象に) - null/undefined対応
+                const searchableText = [
+                    doc.id || '',
+                    doc.grade || '',
+                    doc.unit || '',
+                    doc.keywords || '', // キーワード列も検索対象に
+                    doc.comment || '', // コメントも検索対象に
+                    doc.source_pdf || '',
+                    doc.testType || '', // 問題種別も検索対象に
+                    String(doc.year || ''), // ローカル問題の出題年も検索対象に
+                    String(doc.month || '')
+                ].join(' ').toLowerCase();
+
+                // NOTキーワードのチェック (一つでも含まれていたら除外)
+                for (const notKeyword of notKeywords) {
+                    if (searchableText.includes(notKeyword)) {
+                        return false;
+                    }
+                }
+
+                // AND/ORキーワードのチェック
+                if (keywords.length === 0) {
+                    return true; // NOTキーワードのみの場合は通過
+                }
+
+                if (searchMode === 'AND') {
+                    // AND検索: すべてのキーワードを含むか
+                    const result = keywords.every(keyword => searchableText.includes(keyword));
+                    return result;
+                } else {
+                    // OR検索: いずれかのキーワードを含むか
+                    return keywords.some(keyword => searchableText.includes(keyword));
+                }
+            });
+
+            console.log('filterDocuments: filteredResults count=', filteredResults.length);
+
+            // 結果を描画
+            renderResults(filteredResults);
+
+            // 詳細ビューをリセット
+            if (selectedResultCard) {
+                selectedResultCard.classList.remove('selected');
+                selectedResultCard = null;
+            }
+            document.getElementById('detailViewer').innerHTML = '<p class="text-center text-gray-600">左のリストから問題を選択してください。</p>';
+        }
+
+        // === ヘルパー関数 ===
+
+        // データを分割してセットに追加 (カンマ区切り、スラッシュ区切りに対応)
+        function splitAndAdd(dataString, targetSet) {
+            if (dataString == null) return;
+            String(dataString).split(/[,/]/) // カンマまたはスラッシュで分割
+                .map(item => item.trim())
+                .filter(item => item) // 空の文字列を除外
+                .forEach(item => targetSet.add(item));
+        }
+
+        // チェックボックスフィルターがデータに含まれているか (AND)
+        function arrayContainsAll(dataString, filterArray) {
+            if (dataString == null) return false;
+            // データが "1" の場合、["1"] になる
+            const dataItems = String(dataString).split(/[,/]/).map(item => item.trim());
+            // フィルター (例: ["1"]) が dataItems にすべて含まれているか
+            return filterArray.every(filterItem => dataItems.includes(filterItem));
+        }
+
+        // 選択されているチェックボックスの値を取得
+        function getSelectedFilters(containerId) {
+            const container = document.getElementById(containerId);
+            const inputs = container.querySelectorAll('input[type="checkbox"]:checked');
+            return Array.from(inputs).map(input => input.value);
+        }
+
+        // 注: filterDocuments関数は5674行目に定義済み（重複を削除）
+
+        // フィルター判定ヘルパー (ORロジック)
+        function checkFilter(docValue, selectedFilters) {
+            if (selectedFilters.length === 0) return true; // 未選択ならパス
+            if (docValue == null) return false; // 値がないなら除外
+
+            // docValue は "1" や "植物の分類, 被子植物" のような文字列
+            const docItems = String(docValue).split(/[,/]/).map(item => item.trim());
+
+            // selectedFilters のどれかひとつでも docItems に含まれていれば OK
+            return selectedFilters.some(filter => docItems.includes(filter));
+        }
+
+        // 全フィルターをクリアする
+        function clearAllFilters() {
+            const filterContainers = ['gradeFilters', 'unitFilters', 'testTypeFilters', 'yearFilters', 'monthFilters'];
+            filterContainers.forEach(containerId => {
+                const container = document.getElementById(containerId);
+                const inputs = container.querySelectorAll('input[type="checkbox"]');
+                inputs.forEach(input => input.checked = false);
+            });
+            // 検索も実行
+            filterDocuments();
+        }
+
+
+        // --- ヘルパー関数: テキストを画像(DataURL)に変換 ---
+        function createTextImage(text, fontSize = 24, fontWeight = 'bold', color = '#000000') {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // フォント設定 (ブラウザのフォントを使用)
+            const fontFamily = '"Noto Sans JP", sans-serif';
+            ctx.font = `${fontWeight} ${fontSize}px ${fontFamily} `;
+
+            // テキストサイズ計測
+            const metrics = ctx.measureText(text);
+            const textWidth = Math.ceil(metrics.width);
+            const textHeight = Math.ceil(fontSize * 1.5); // 少し余裕を持たせる
+
+            // キャンバスサイズ設定 (高解像度対応: 2倍サイズで描画して縮小表示想定)
+            const scale = 2; // 画質向上のためのスケール
+            canvas.width = textWidth * scale;
+            canvas.height = textHeight * scale;
+
+            // スケール適用
+            ctx.scale(scale, scale);
+            ctx.font = `${fontWeight} ${fontSize}px ${fontFamily} `;
+            ctx.fillStyle = color;
+            ctx.textBaseline = 'middle';
+
+            // 描画
+            ctx.fillText(text, 0, textHeight / 2);
+
+            return {
+                dataUrl: canvas.toDataURL('image/png'),
+                width: textWidth,
+                height: textHeight
+            };
+        }
+
+
+        async function drawProblemPage(doc, docData, images, isFirstPage = false) {
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 10;
+            const usableWidth = pageWidth - margin * 2;
+
+            // 問題画像の枚数分ループ
+            // 問題画像描画ループ
+            let currentY = margin + 5;
+
+            for (let i = 0; i < images.problems.length; i++) {
+                const imgObj = images.problems[i];
+                if (!imgObj) continue;
+
+                // 画像サイズ計算
+                const img = imgObj.img;
+                const ratio = img.width / img.height;
+                let drawH = usableWidth / ratio;
+
+                // ヘッダー高さ (各画像につける場合。今回は最初の画像のみ、あるいはページ先頭のみヘッダーをつける？)
+                const gap = 5;
+
+                // 現在位置＋画像高さがページからはみ出るか？
+                if (currentY + drawH > pageHeight - margin) {
+                    // はみ出るなら改ページ
+                    doc.addPage();
+                    doc.setFont('Helvetica', 'normal');
+                    currentY = margin + 5;
+                }
+
+                // ページ先頭(currentYが初期値付近)ならヘッダーを描画
+                if (Math.abs(currentY - (margin + 5)) < 1) {
+                    // ヘッダー描画
+                    doc.setFontSize(10);
+                    doc.setFont('Helvetica', 'normal');
+
+                    const typeMap = {
+                        '学力テスト': 'GakuryokuTEST',
+                        '基礎学力テスト': 'Kisogaku'
+                    };
+                    const typeRaw = docData.testType || '';
+                    const typeStr = typeMap[typeRaw] || typeRaw || 'Unknown';
+
+                    const yearVal = docData.year || '';
+                    const monthVal = docData.month ? docData.month.toString().padStart(2, '0') : '';
+                    const dateStr = (yearVal && monthVal) ? `${yearVal} -${monthVal} ` : (yearVal || '');
+                    const commentStr = docData.comment || '';
+
+                    const headerParts = [typeStr, dateStr, commentStr].filter(s => s);
+                    const headerText = `ID:${docData.id}  ${headerParts.join('  ')} (${i + 1}/${images.problems.length})`;
+
+                    const headerImg = createTextImage(headerText, 16, 'normal', '#333333');
+                    const headerH = 5;
+                    const headerW = headerImg.width * (headerH / headerImg.height);
+                    doc.addImage(headerImg.dataUrl, 'PNG', margin, margin - 4, headerW, headerH);
+                }
+
+                // 画像描画
+                doc.addImage(img, imgObj.fmt, margin, currentY, usableWidth, drawH);
+
+                // 次の描画位置へ
+                currentY += drawH + gap;
+            }
+
+            // === 解説・解答セクション (新しいページから開始、詰めて描画) ===
+            if (
+                (images.explanation && (Array.isArray(images.explanation) ? images.explanation.length > 0 : true)) ||
+                (images.answer && (Array.isArray(images.answer) ? images.answer.length > 0 : true))
+            ) {
+                // 解説・解答がある場合は必ず改ページしてスタート
+                doc.addPage();
+                let currentY = margin;
+                const gap = 5;
+
+                // --- ヘルパー: コンテンツ描画 (高さチェック付き) ---
+                const drawContent = (label, imgObj) => {
+                    // 画像高さ計算 (幅は常にusableWidth)
+                    const img = imgObj.img;
+                    const fmt = imgObj.fmt;
+                    const ratio = img.width / img.height;
+                    let drawH = usableWidth / ratio;
+
+                    // ヘッダー高さ (ラベルがある場合)
+                    const labelH = label ? 8 : 0;
+                    const totalH = labelH + drawH + gap;
+
+                    // ページからはみ出る場合は改ページ
+                    if (currentY + totalH > pageHeight - margin) {
+                        doc.addPage();
+                        currentY = margin;
+                    }
+
+                    // ラベル描画 (画像化して表示)
+                    if (label) {
+                        const labelImg = createTextImage(label, 20, 'bold', '#000000');
+                        // 高さ6mmに合わせる
+                        const drawLabelH = 6;
+                        const drawLabelW = labelImg.width * (drawLabelH / labelImg.height);
+                        doc.addImage(labelImg.dataUrl, 'PNG', margin, currentY, drawLabelW, drawLabelH);
+
+                        currentY += labelH;
+                    }
+
+                    // 画像描画
+                    doc.addImage(img, fmt, margin, currentY, usableWidth, drawH);
+                    currentY += drawH + gap;
+                };
+
+                // 解説描画 loop
+                if (images.explanation) {
+                    const expImages = Array.isArray(images.explanation) ? images.explanation : [images.explanation];
+                    for (let i = 0; i < expImages.length; i++) {
+                        // 最初の1枚目だけ「解説」
+                        let label = (i === 0) ? "■ 解説" : null;
+                        drawContent(label, expImages[i]);
+                    }
+                }
+
+                // 解説と解答の間に少しスペース
+                if (images.explanation && images.answer) {
+                    currentY += 5;
+                }
+
+                // 解答描画 loop
+                if (images.answer) {
+                    const ansImages = Array.isArray(images.answer) ? images.answer : [images.answer];
+                    for (let i = 0; i < ansImages.length; i++) {
+                        // 最初の1枚目だけ「解答」
+                        let label = (i === 0) ? "■ 解答" : null;
+                        drawContent(label, ansImages[i]);
+                    }
+                }
+            }
+        }
+
+
+
+        // --- ヘルパー関数: フッター画像描画 (解説・解答) ---
+        function drawFooterImages(doc, images, margin, startY, usableWidth, usableHeight) {
+            if (images.explanation && images.answer) {
+                // 解説(複数可) ＆ 解答
+                // レイアウト: [解説エリア (左)] [解答エリア (右)]
+
+                const gap = 5; // mm
+
+                // 1. 解答画像 (右側) のサイズ計算 (高さ50%基準)
+                const ansImg = images.answer.img;
+                const ansRatio = ansImg.width / ansImg.height;
+
+                let drawAnsH = usableHeight * 0.5;
+                let drawAnsW = drawAnsH * ansRatio;
+
+                if (drawAnsW > usableWidth * 0.4) {
+                    drawAnsW = usableWidth * 0.4;
+                    drawAnsH = drawAnsW / ansRatio;
+                }
+
+                // 解説エリア幅を動的に決定 (解答幅を引いた残り)
+                const expAreaWidth = usableWidth - drawAnsW - gap;
+                const ansX = margin + usableWidth - drawAnsW;
+                const ansY = startY + (usableHeight - drawAnsH) / 2;
+                doc.addImage(ansImg, images.answer.fmt, ansX, ansY, drawAnsW, drawAnsH);
+
+                // 2. 解説描画 (左側・縦並び)
+                const expImages = Array.isArray(images.explanation) ? images.explanation : [images.explanation];
+                if (expImages.length > 0) {
+                    const N = expImages.length;
+                    const subGap = 2;
+                    // 利用可能な最大高さ
+                    const totalH = usableHeight;
+                    // 均等割り付けエリアの高さ
+                    const maxHPerImg = (totalH - (subGap * (N - 1))) / N;
+
+                    let currentY = startY;
+
+                    for (const item of expImages) {
+                        const img = item.img;
+                        const ratio = img.width / img.height;
+
+                        // 高さ基準で計算
+                        let h = maxHPerImg;
+                        let w = h * ratio;
+
+                        // 幅制限 (エリア幅を超えないように)
+                        if (w > expAreaWidth) {
+                            w = expAreaWidth;
+                            h = w / ratio;
+                        }
+
+                        // 上下配置: エリアの上下中央
+                        const drawY = currentY + (maxHPerImg - h) / 2;
+
+                        // 左右配置: エリアの左右中央 (または左寄せ)
+                        const drawX = margin + (expAreaWidth - w) / 2;
+
+                        doc.addImage(img, item.fmt, drawX, drawY, w, h);
+                        currentY += maxHPerImg + subGap;
+                    }
+                }
+
+            } else if (images.explanation) {
+                // 解説のみ (複数対応)
+                const expImages = Array.isArray(images.explanation) ? images.explanation : [images.explanation];
+                if (expImages.length > 0) {
+                    // 単純に横並び
+                    const gap = 5;
+                    const maxWPerImg = (usableWidth - (gap * (expImages.length - 1))) / expImages.length;
+
+                    let currentX = margin;
+
+                    for (const item of expImages) {
+                        const img = item.img;
+                        const ratio = img.width / img.height;
+
+                        let w = maxWPerImg;
+                        let h = w / ratio;
+
+                        if (h > usableHeight) {
+                            h = usableHeight;
+                            w = h * ratio;
+                        }
+
+                        // 上下中央
+                        const y = startY + (usableHeight - h) / 2;
+
+                        doc.addImage(img, item.fmt, currentX, y, w, h);
+                        currentX += w + gap;
+                    }
+                }
+
+            } else if (images.answer) {
+                // 解答のみ
+                const ansImg = images.answer.img;
+                const ansRatio = ansImg.width / ansImg.height;
+                let drawAnsH = usableHeight;
+                let drawAnsW = drawAnsH * ansRatio;
+
+                if (drawAnsW > usableWidth) {
+                    drawAnsW = usableWidth;
+                    drawAnsH = drawAnsW / ansRatio;
+                }
+                const ansX = margin + (usableWidth - drawAnsW) / 2;
+                doc.addImage(ansImg, images.answer.fmt, ansX, startY, drawAnsW, drawAnsH);
+            }
+        }
+
+        // ヘルパー: 画像ロードとフォーマット取得
+        const loadImage = (blob) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => {
+                    console.warn('Failed to load image from blob');
+                    resolve(null); // エラーでも止まらない
+                };
+                try {
+                    img.src = URL.createObjectURL(blob);
+                } catch (e) {
+                    console.warn('URL.createObjectURL failed', e);
+                    resolve(null);
+                }
+            });
+        };
+
+        const getFormat = (blob) => {
+            if (blob.type === 'image/jpeg') return 'JPEG';
+            if (blob.type === 'image/png') return 'PNG';
+            return 'PNG';
+        };
+
+        async function prepareImages(docData) {
+            const images = { problems: [] };
+
+            // 問題画像: 配列(problemBlobs)があればそれを使用、なければ配列(images: URL)を使用、それもなければimageBlobを単体で使用
+            if (docData.problemBlobs && docData.problemBlobs.length > 0) {
+                for (const blob of docData.problemBlobs) {
+                    images.problems.push({ img: await loadImage(blob), fmt: getFormat(blob) });
+                }
+            } else if (docData.images && docData.images.length > 0) {
+                for (const src of docData.images) {
+                    const img = await new Promise((resolve) => {
+                        const i = new Image();
+                        i.crossOrigin = "anonymous";
+                        i.onload = () => resolve(i);
+                        i.onerror = () => {
+                            console.warn('Failed to load problem image:', src);
+                            resolve(null);
+                        };
+
+                        // Static Mode handling for relative paths
+                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:')) {
+                            // index.json contains filenames like "problem_XXX.png"
+                            // We assume images are in "./problems/" relative to the HTML
+                            i.src = './problems/' + src;
+                        } else {
+                            i.src = src;
+                        }
+                    });
+                    if (img) images.problems.push({ img: img, fmt: 'PNG' });
+                }
+            } else if (docData.imageBlob) {
+                const img = await loadImage(docData.imageBlob);
+                if (img) images.problems.push({ img: img, fmt: getFormat(docData.imageBlob) });
+            }
+
+            // 解説画像: explanationImages(Filename/URL) -> explanationBlobs(Blob) -> explanationBlob(Legacy)
+            if (docData.explanationBlobs && docData.explanationBlobs.length > 0) {
+                // IndexedDB Mode (Blobs available)
+                images.explanation = [];
+                for (const blob of docData.explanationBlobs) {
+                    images.explanation.push({ img: await loadImage(blob), fmt: getFormat(blob) });
+                }
+            } else if (docData.explanationImages && docData.explanationImages.length > 0) {
+                images.explanation = [];
+                for (const src of docData.explanationImages) {
+                    if (typeof src === 'string') {
+                        // URL/文字列 (Mock / Static)
+                        const img = await new Promise((resolve) => {
+                            const i = new Image();
+                            i.crossOrigin = "anonymous";
+                            i.onload = () => resolve(i);
+                            i.onerror = () => {
+                                console.warn('Failed to load explanation image:', src);
+                                resolve(null);
+                            };
+
+                            // Static Mode handling
+                            if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                                i.src = './problems/' + src;
+                            } else {
+                                i.src = src;
+                            }
+                        });
+                        if (img) images.explanation.push({ img: img, fmt: 'PNG' });
+                    } else {
+                        // Blob (should not happen in static, but keep for safety)
+                        const img = await loadImage(src);
+                        if (img) images.explanation.push({ img: img, fmt: getFormat(src) });
+                    }
+                }
+            } else if (docData.explanationImage) {
+                // 互換性: 単体文字列
+                if (typeof docData.explanationImage === 'string') {
+                    const img = await new Promise((resolve) => {
+                        const i = new Image();
+                        i.crossOrigin = "anonymous";
+                        i.onload = () => resolve(i);
+                        i.onerror = () => {
+                            console.warn('Failed to load explanationImage:', docData.explanationImage);
+                            resolve(null);
+                        };
+                        const src = docData.explanationImage;
+                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                            i.src = './problems/' + src;
+                        } else {
+                            i.src = src;
+                        }
+                    });
+                    if (img) images.explanation = [{ img: img, fmt: 'PNG' }];
+                } else {
+                    images.explanation = [{ img: await loadImage(docData.explanationImage), fmt: getFormat(docData.explanationImage) }];
+                }
+            } else if (docData.explanationBlob) {
+                // 登録直後のプレビュー用など
+                images.explanation = [{ img: await loadImage(docData.explanationBlob), fmt: getFormat(docData.explanationBlob) }];
+            }
+            // 解答画像
+            // 解答画像
+            // answerBlobs(Blob[]) -> answerImages(Url[]) -> answerBlob(legacy) -> answerImage(legacy URL)
+            if (docData.answerBlobs && docData.answerBlobs.length > 0) {
+                images.answer = [];
+                for (const blob of docData.answerBlobs) {
+                    images.answer.push({ img: await loadImage(blob), fmt: getFormat(blob) });
+                }
+            } else if (docData.answerImages && docData.answerImages.length > 0) {
+                images.answer = [];
+                for (const src of docData.answerImages) {
+                    if (typeof src === 'string') {
+                        const img = await new Promise((resolve) => {
+                            const i = new Image();
+                            i.crossOrigin = "anonymous";
+                            i.onload = () => resolve(i);
+                            i.onerror = () => {
+                                console.warn('Failed to load answer image:', src);
+                                resolve(null);
+                            };
+
+                            if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                                i.src = './problems/' + src;
+                            } else {
+                                i.src = src;
+                            }
+                        });
+                        if (img) images.answer.push({ img: img, fmt: 'PNG' });
+                    } else {
+                        const img = await loadImage(src);
+                        if (img) images.answer.push({ img: img, fmt: getFormat(src) });
+                    }
+                }
+            } else if (docData.answerBlob) {
+                images.answer = [{ img: await loadImage(docData.answerBlob), fmt: getFormat(docData.answerBlob) }];
+            } else if (docData.answerImage) {
+                if (typeof docData.answerImage === 'string') {
+                    const img = await new Promise((resolve) => {
+                        const i = new Image();
+                        i.crossOrigin = "anonymous";
+                        i.onload = () => resolve(i);
+                        i.onerror = () => {
+                            console.warn('Failed to load answerImage:', docData.answerImage);
+                            resolve(null);
+                        };
+                        const src = docData.answerImage;
+                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                            i.src = './problems/' + src;
+                        } else {
+                            i.src = src;
+                        }
+                    });
+                    if (img) images.answer = [{ img: img, fmt: 'PNG' }];
+                } else {
+                    const img = await loadImage(docData.answerImage);
+                    if (img) images.answer = [{ img: img, fmt: getFormat(docData.answerImage) }];
+                }
+            }
+            return images;
+        }
+
+        // === 個別PDF作成機能 ===
+        async function generateSinglePDF(docId) {
+            try {
+                let docData = MOCK_SCIENCE_DATA.find(d => d.id === docId);
+                if (localProblems) {
+                    const localDoc = localProblems.find(d => d.id === docId);
+                    if (localDoc) docData = localDoc;
+                }
+                if (!docData) {
+                    alert('データが見つかりません');
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                // 標準フォント設定
+                doc.setFont('Helvetica', 'normal');
+
+                const images = await prepareImages(docData);
+                if (!images.problems || images.problems.length === 0) {
+                    alert('問題画像がありません');
+                    return;
+                }
+
+                await drawProblemPage(doc, docData, images, true);
+
+                // ファイル名生成: 理科 [TestType] [Year] [Comment]
+                const subject = "理科";
+                const parts = [
+                    subject,
+                    docData.testType,
+                    docData.year,
+                    docData.comment,
+                    docData.unit
+                ].filter(s => s && s.trim() !== ''); // 空文字除外
+
+                const filename = parts.join(' ') + '.pdf';
+                doc.save(filename);
+
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                alert('PDF作成に失敗しました: ' + error.message);
+            }
+        }
+
+        // === 一括PDF作成機能 (pdf-libによる結合) ===
+        async function generateCollectedPDF() {
+            if (collectedProblemIds.size === 0) return;
+
+            // ローディング表示（簡易的）
+            const btn = document.querySelector('button[onclick="generateCollectedPDF()"]');
+            const originalText = btn.textContent;
+            btn.textContent = '作成中...';
+            btn.disabled = true;
+
+            try {
+                const { PDFDocument } = window.PDFLib;
+                const { jsPDF } = window.jspdf;
+
+                // 新しいPDFドキュメントを作成
+                const mergedPdf = await PDFDocument.create();
+
+                const ids = Array.from(collectedProblemIds);
+                // 選択順序を守るならここでソートが必要かもしれないが、今はID順ではなく「選択（追加）順」＝Setの順序に従う
+
+                for (const id of ids) {
+                    let docData = MOCK_SCIENCE_DATA.find(d => d.id === id);
+                    if (!docData) docData = localProblems.find(d => d.id === id);
+                    if (!docData) continue;
+
+                    // A. 既存のPDFファイルの場合
+                    if (docData.source_pdf) {
+                        try {
+                            // PDFファイルをfetch
+                            const pdfPath = `./ pdfs / ${docData.source_pdf} `;
+                            const pdfBytes = await fetch(pdfPath).then(res => {
+                                if (!res.ok) throw new Error(`PDF not found: ${pdfPath} `);
+                                return res.arrayBuffer();
+                            }).catch(err => {
+                                throw new Error(`既存PDFの読み込みに失敗しました(${docData.id}): ${err.message} \n※ローカル(file://)環境ではブラウザのセキュリティ制限によりPDFを読み込めない場合があります。`);
+                            });
+
+                            // pdf-libでロード
+                            const existingPdf = await PDFDocument.load(pdfBytes);
+                            // 全ページをコピー
+                            const copiedPages = await mergedPdf.copyPages(existingPdf, existingPdf.getPageIndices());
+                            copiedPages.forEach((page) => mergedPdf.addPage(page));
+
+                        } catch (e) {
+                            console.error(`Failed to load existing PDF (${id}):`, e);
+                            // 失敗した場合、白紙にエラーを書くなどの処理も可能だが、今回はスキップまたはログのみ
+                        }
+                    }
+                    // B. ローカルデータ（画像）の場合
+                    else {
+                        const images = await prepareImages(docData);
+                        if (!images.problems || images.problems.length === 0) continue;
+
+                        // jsPDFで一時的なPDFを生成
+                        const doc = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: 'a4'
+                        });
+
+                        // 標準フォント設定
+                        doc.setFont('Helvetica', 'normal');
+
+                        await drawProblemPage(doc, docData, images, true); // 常に先頭ページ扱い（改ページなしで開始）
+
+                        // ArrayBufferとして出力
+                        const pdfArrayBuffer = doc.output('arraybuffer');
+
+                        // pdf-libでロードしてマージ
+                        const localPdf = await PDFDocument.load(pdfArrayBuffer);
+                        const copiedPages = await mergedPdf.copyPages(localPdf, localPdf.getPageIndices());
+                        copiedPages.forEach((page) => mergedPdf.addPage(page));
+                    }
+                }
+
+                // 保存
+                const mergedPdfBytes = await mergedPdf.save();
+                const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Combined_Math_Problems_${ids.length}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error('Bulk PDF generation error:', error);
+                alert('一括PDF作成に失敗しました: ' + error.message);
+            } finally {
+                // ボタン復帰
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // === 日本語フォント読み込み ===
+        async function loadJapaneseFont(doc) {
+            // Font loading disabled (using Helvetica)
+            return Promise.resolve();
+
+            // 1. まずファイル入力を確認 (オフライン/手動モード)
+            const fileInput = document.getElementById('offlineFontInput');
+            if (fileInput && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                console.log('Using local font file:', file.name);
+
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result.split(',')[1];
+                        if (base64) {
+                            // Use 'ipaexg.ttf' as VFS name to match existing code logic
+                            // Use 'MSGothic' as font name to match existing code requests
+                            doc.addFileToVFS('ipaexg.ttf', base64);
+                            doc.addFont('ipaexg.ttf', 'MSGothic', 'normal');
+                            console.log('Local font loaded independently.');
+                            resolve();
+                        } else {
+                            reject(new Error('Local file read failed'));
+                        }
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // 2. なければネットから取得 (既存ロジック)
+            // User requested MS Gothic -> Using IPAexGothic as substitute (look-alike)
+            const fontUrl = 'https://unpkg.com/@canvas-fonts/ipaexgothic@1.0.4/fonts/ipaexg.ttf';
+            const fontName = 'MSGothic';
+
+            try {
+                if (doc.existsFileInVFS('ipaexg.ttf')) {
+                    return;
+                }
+
+                const response = await fetch(fontUrl);
+                if (!response.ok) throw new Error(`Font load failed: ${response.status} ${response.statusText}`);
+                const blob = await response.blob();
+
+                // --- Size Check ---
+                if (blob.size < 1000 * 1000) {
+                    throw new Error(`Downloaded file is too small (${Math.round(blob.size / 1024)}KB). Likely a firewall block page.`);
+                }
+
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(',')[1];
+                        if (base64) {
+                            doc.addFileToVFS('ipaexg.ttf', base64);
+                            doc.addFont('ipaexg.ttf', fontName, 'normal');
+                            console.log(`Japanese font (${fontName}) loaded successfully. Size: ${(base64.length / 1024 / 1024).toFixed(2)} MB`);
+                            resolve();
+                        } else {
+                            reject(new Error('Base64 conversion failed'));
+                        }
+                    };
+                    reader.onerror = (e) => reject(new Error('FileReader error: ' + e.target.error));
+                    reader.readAsDataURL(blob);
+                });
+
+            } catch (error) {
+                console.error('Font load error:', error);
+                alert(`日本語フォント読み込みエラー: ${error.message}\n\n【重要】\nネットワーク制限のため、フォントをダウンロードできませんでした。\n時間をおいてから再度お試しいただくか、ネットワーク環境をご確認ください。`);
+                throw error;
+            }
+        }
+    </script>
+
+    <!-- 設定モーダル -->
+    <dialog id="settingsModal" class="p-0 rounded-xl shadow-2xl backdrop:bg-black/50 w-full max-w-xl">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <span>⚙️</span> データ保存設定
+                </h2>
+                <button id="closeSettingsBtn"
+                    class="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">📂</span>
+                        <h3 class="text-base font-bold text-gray-800">データ保存先</h3>
+                    </div>
+                    <div id="storageStatus"
+                        class="text-xs font-medium px-2 py-1 rounded-full bg-white text-gray-600 border border-gray-200 shadow-sm">
+                        ブラウザ内保存
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mb-3 leading-relaxed">
+                    OneDrive等の共有フォルダを選択すると、複数PCでデータを共有できます。<br>
+                    問題登録画面と同じフォルダを指定してください。
+                </p>
+                <div class="flex gap-3">
+                    <button id="selectFolderBtn"
+                        class="bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
+                        <span>📁</span> フォルダを選択
+                    </button>
+                    <div id="folderPathDisplay"
+                        class="flex-1 bg-white border border-blue-300 rounded-lg px-3 py-2 text-xs text-gray-500 flex items-center overflow-hidden whitespace-nowrap">
+                        未選択 (IndexedDB)
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="saveSettingsBtn"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center gap-2">
+                    💾 設定を保存
+                </button>
+                <button onclick="document.getElementById('settingsModal').close()"
+                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+</body>
+
+</html>
