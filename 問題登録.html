@@ -2357,14 +2357,26 @@ JSON以外のテキストは出力しないでください。`
                         return copy;
                     });
 
-                    // 3. index.json として保存
+                    // 3. index.json として保存 (保存場所を選択させる)
                     const jsonString = JSON.stringify(exportData, null, 2);
-                    const fileHandle = await dirHandle.getFileHandle('index.json', { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(jsonString);
-                    await writable.close();
 
-                    alert('書き出し完了！\n\nGitHubにプッシュすると、このデータがVercel上で公開されます。\n(反映には数分かかる場合があります)\n\n※検索ページ(index.html)側では MOCK_ENGLISH_DATA 変数を空配列 [] にし、Fetchで読み込むようにしてください。');
+                    try {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: 'index.json',
+                            types: [{
+                                description: 'JSON File',
+                                accept: { 'application/json': ['.json'] },
+                            }],
+                        });
+
+                        const writable = await handle.createWritable();
+                        await writable.write(jsonString);
+                        await writable.close();
+
+                        alert('書き出し完了！\n\n「' + handle.name + '」と同じ階層に index.html があることを確認してください。\nGitHubにプッシュすると反映されます。');
+                    } catch (cancelErr) {
+                        return; // キャンセル
+                    }
 
                 } catch (e) {
                     console.error('Export Error:', e);
