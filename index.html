@@ -1960,9 +1960,9 @@
                         };
 
                         // Static Mode handling for relative paths
-                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:')) {
-                            // index.json contains filenames like "problem_XXX.png"
-                            // We assume images are in "./problems/" relative to the HTML
+                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('./problems/')) {
+                            // index.json contains filenames like "problem_XXX.png" OR paths like "./problems/problem_XXX.png"
+                            // If it's just a filename, prepend folder path.
                             i.src = './problems/' + src;
                         } else {
                             i.src = src;
@@ -1997,7 +1997,7 @@
                             };
 
                             // Static Mode handling
-                            if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                            if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('./problems/')) {
                                 i.src = './problems/' + src;
                             } else {
                                 i.src = src;
@@ -2022,7 +2022,7 @@
                             resolve(null);
                         };
                         const src = docData.explanationImage;
-                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('./problems/')) {
                             i.src = './problems/' + src;
                         } else {
                             i.src = src;
@@ -2057,7 +2057,7 @@
                                 resolve(null);
                             };
 
-                            if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                            if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('./problems/')) {
                                 i.src = './problems/' + src;
                             } else {
                                 i.src = src;
@@ -2082,7 +2082,7 @@
                             resolve(null);
                         };
                         const src = docData.answerImage;
-                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
+                        if (window.isStaticMode && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('./problems/')) {
                             i.src = './problems/' + src;
                         } else {
                             i.src = src;
@@ -2100,7 +2100,7 @@
         // === 個別PDF作成機能 ===
         async function generateSinglePDF(docId) {
             try {
-                let docData = MOCK_SCIENCE_DATA.find(d => d.id === docId);
+                let docData = MOCK_ENGLISH_DATA.find(d => d.id === docId);
                 if (localProblems) {
                     const localDoc = localProblems.find(d => d.id === docId);
                     if (localDoc) docData = localDoc;
@@ -2128,8 +2128,8 @@
 
                 await drawProblemPage(doc, docData, images, true);
 
-                // ファイル名生成: 理科 [TestType] [Year] [Comment]
-                const subject = "理科";
+                // ファイル名生成: 英語 [TestType] [Year] [Comment]
+                const subject = "英語";
                 const parts = [
                     subject,
                     docData.testType,
@@ -2168,7 +2168,7 @@
                 // 選択順序を守るならここでソートが必要かもしれないが、今はID順ではなく「選択（追加）順」＝Setの順序に従う
 
                 for (const id of ids) {
-                    let docData = MOCK_SCIENCE_DATA.find(d => d.id === id);
+                    let docData = MOCK_ENGLISH_DATA.find(d => d.id === id);
                     if (!docData) docData = localProblems.find(d => d.id === id);
                     if (!docData) continue;
 
