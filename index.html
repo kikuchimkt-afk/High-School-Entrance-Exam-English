@@ -1510,7 +1510,7 @@
             console.log('filterDocuments: keywordInput=', keywordInput, ', keywords=', keywords, ', searchMode=', searchMode);
 
             // 全データ（既存 + ローカル）をフィルタリング
-            const allData = [...MOCK_SCIENCE_DATA, ...localProblems];
+            const allData = [...MOCK_ENGLISH_DATA, ...localProblems];
             console.log('filterDocuments: allData count=', allData.length);
 
             const filteredResults = allData.filter(doc => {

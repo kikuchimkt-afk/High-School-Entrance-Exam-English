@@ -2306,6 +2306,99 @@ JSON以外のテキストは出力しないでください。`
                     settingsModal.close();
                 }
             });
+            // === Vercel用データ書き出し機能 ===
+            async function exportForVercel() {
+                try {
+                    if (!dirHandle) {
+                        alert('保存先フォルダが選択されていません。「設定」からフォルダを選択してください。');
+                        return;
+                    }
+
+                    if (!confirm('現在のデータで Vercel 用の index.json を作成しますか？\n(既存の index.json は上書きされます)')) {
+                        return;
+                    }
+
+                    // 1. 最新のデータを取得
+                    const problems = await loadProblemsFromFileSystem();
+                    if (problems.length === 0) {
+                        alert('書き出すデータがありません。問題を登録してください。');
+                        return;
+                    }
+
+                    // 2. データ整形 (画像パスを相対パスに変換し、Blobを除外)
+                    const exportData = problems.map(p => {
+                        const copy = { ...p };
+                        // Blobなど不要なフィールドを削除
+                        delete copy.imageBlob;
+                        delete copy.problemBlobs; // 配列Blob
+                        delete copy.explanationBlob;
+                        delete copy.explanationBlobs; // 配列Blob
+                        delete copy.answerBlob;
+                        delete copy.answerBlobs; // 配列Blob
+
+                        // 画像パスを修正 ( ./problems/filename )
+                        // 問題画像
+                        if (copy.images && copy.images.length > 0) {
+                            copy.images = copy.images.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
+                        }
+                        // 解説画像
+                        if (copy.explanationImages && copy.explanationImages.length > 0) {
+                            copy.explanationImages = copy.explanationImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
+                        }
+                        // 解答画像
+                        if (copy.answerImages && copy.answerImages.length > 0) {
+                            copy.answerImages = copy.answerImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
+                        } else if (copy.answerImage) {
+                            // 旧形式互換
+                            const img = copy.answerImage;
+                            copy.answerImage = img.startsWith('./problems/') ? img : './problems/' + img;
+                        }
+
+                        return copy;
+                    });
+
+                    // 3. index.json として保存
+                    const jsonString = JSON.stringify(exportData, null, 2);
+                    const fileHandle = await dirHandle.getFileHandle('index.json', { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(jsonString);
+                    await writable.close();
+
+                    alert('書き出し完了！\n\nGitHubにプッシュすると、このデータがVercel上で公開されます。\n(反映には数分かかる場合があります)\n\n※検索ページ(index.html)側では MOCK_ENGLISH_DATA 変数を空配列 [] にし、Fetchで読み込むようにしてください。');
+
+                } catch (e) {
+                    console.error('Export Error:', e);
+                    alert('書き出しに失敗しました: ' + e.message);
+                }
+            }
+
+            // === ファイルシステムから全問題を読み込み (Export用) ===
+            async function loadProblemsFromFileSystem() {
+                try {
+                    // index.json から読み込むが、なければ空
+                    let problems = [];
+                    try {
+                        const indexFile = await dirHandle.getFileHandle('index.json');
+                        const file = await indexFile.getFile();
+                        const text = await file.text();
+                        problems = JSON.parse(text || '[]');
+                    } catch {
+                        // index.jsonがない場合は、実ファイル(problemsフォルダ)から再構築は難しいので、空スタート
+                        // (通常はアプリ上で管理してるので index.json は同期されてるはず)
+                        return [];
+                    }
+                    return problems;
+                } catch (e) {
+                    console.log('Error reading file system:', e);
+                    return [];
+                }
+            }
+
+            // Vercelエクスポートボタン
+            const exportVercelBtn = document.getElementById('exportVercelBtn');
+            if (exportVercelBtn) {
+                exportVercelBtn.addEventListener('click', exportForVercel);
+            }
         };
     </script>
     <!-- 設定モーダル -->

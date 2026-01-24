@@ -11,14 +11,14 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:08:24.208Z",
     "images": [
-      "LOCAL001_problem_1.png"
+      "./problems/LOCAL001_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL001_explanation_1.png",
-      "LOCAL001_explanation_2.png"
+      "./problems/LOCAL001_explanation_1.png",
+      "./problems/LOCAL001_explanation_2.png"
     ],
     "answerImages": [
-      "LOCAL001_answer_1.png"
+      "./problems/LOCAL001_answer_1.png"
     ],
     "answerImage": "LOCAL001_answer_1.png"
   },
@@ -34,15 +34,15 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:08:07.188Z",
     "images": [
-      "LOCAL002_problem_1.png"
+      "./problems/LOCAL002_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL002_explanation_1.png",
-      "LOCAL002_explanation_2.png",
-      "LOCAL002_explanation_3.png"
+      "./problems/LOCAL002_explanation_1.png",
+      "./problems/LOCAL002_explanation_2.png",
+      "./problems/LOCAL002_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL002_answer_1.png"
+      "./problems/LOCAL002_answer_1.png"
     ],
     "answerImage": "LOCAL002_answer_1.png"
   },
@@ -58,14 +58,14 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:11:42.778Z",
     "images": [
-      "LOCAL003_problem_1.png"
+      "./problems/LOCAL003_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL003_explanation_1.png",
-      "LOCAL003_explanation_2.png"
+      "./problems/LOCAL003_explanation_1.png",
+      "./problems/LOCAL003_explanation_2.png"
     ],
     "answerImages": [
-      "LOCAL003_answer_1.png"
+      "./problems/LOCAL003_answer_1.png"
     ],
     "answerImage": "LOCAL003_answer_1.png"
   },
@@ -81,14 +81,14 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:13:38.312Z",
     "images": [
-      "LOCAL004_problem_1.png",
-      "LOCAL004_problem_2.png"
+      "./problems/LOCAL004_problem_1.png",
+      "./problems/LOCAL004_problem_2.png"
     ],
     "explanationImages": [
-      "LOCAL004_explanation_1.png"
+      "./problems/LOCAL004_explanation_1.png"
     ],
     "answerImages": [
-      "LOCAL004_answer_1.png"
+      "./problems/LOCAL004_answer_1.png"
     ],
     "answerImage": "LOCAL004_answer_1.png"
   },
@@ -104,14 +104,14 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:18:49.389Z",
     "images": [
-      "LOCAL005_problem_1.png"
+      "./problems/LOCAL005_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL005_explanation_1.png",
-      "LOCAL005_explanation_2.png"
+      "./problems/LOCAL005_explanation_1.png",
+      "./problems/LOCAL005_explanation_2.png"
     ],
     "answerImages": [
-      "LOCAL005_answer_1.png"
+      "./problems/LOCAL005_answer_1.png"
     ],
     "answerImage": "LOCAL005_answer_1.png"
   },
@@ -127,14 +127,14 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:20:22.557Z",
     "images": [
-      "LOCAL006_problem_1.png"
+      "./problems/LOCAL006_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL006_explanation_1.png",
-      "LOCAL006_explanation_2.png"
+      "./problems/LOCAL006_explanation_1.png",
+      "./problems/LOCAL006_explanation_2.png"
     ],
     "answerImages": [
-      "LOCAL006_answer_1.png"
+      "./problems/LOCAL006_answer_1.png"
     ],
     "answerImage": "LOCAL006_answer_1.png"
   },
@@ -150,13 +150,13 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:40:09.819Z",
     "images": [
-      "LOCAL007_problem_1.png"
+      "./problems/LOCAL007_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL007_explanation_1.png"
+      "./problems/LOCAL007_explanation_1.png"
     ],
     "answerImages": [
-      "LOCAL007_answer_1.png"
+      "./problems/LOCAL007_answer_1.png"
     ],
     "answerImage": "LOCAL007_answer_1.png"
   },
@@ -172,19 +172,19 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:24:43.303Z",
     "images": [
-      "LOCAL008_problem_1.png",
-      "LOCAL008_problem_2.png",
-      "LOCAL008_problem_3.png",
-      "LOCAL008_problem_4.png",
-      "LOCAL008_problem_5.png"
+      "./problems/LOCAL008_problem_1.png",
+      "./problems/LOCAL008_problem_2.png",
+      "./problems/LOCAL008_problem_3.png",
+      "./problems/LOCAL008_problem_4.png",
+      "./problems/LOCAL008_problem_5.png"
     ],
     "explanationImages": [
-      "LOCAL008_explanation_1.png",
-      "LOCAL008_explanation_2.png",
-      "LOCAL008_explanation_3.png",
-      "LOCAL008_explanation_4.png",
-      "LOCAL008_explanation_5.png",
-      "LOCAL008_explanation_6.png"
+      "./problems/LOCAL008_explanation_1.png",
+      "./problems/LOCAL008_explanation_2.png",
+      "./problems/LOCAL008_explanation_3.png",
+      "./problems/LOCAL008_explanation_4.png",
+      "./problems/LOCAL008_explanation_5.png",
+      "./problems/LOCAL008_explanation_6.png"
     ],
     "answerImages": [],
     "answerImage": null
@@ -201,15 +201,15 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:26:38.084Z",
     "images": [
-      "LOCAL009_problem_1.png"
+      "./problems/LOCAL009_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL009_explanation_1.png",
-      "LOCAL009_explanation_2.png",
-      "LOCAL009_explanation_3.png"
+      "./problems/LOCAL009_explanation_1.png",
+      "./problems/LOCAL009_explanation_2.png",
+      "./problems/LOCAL009_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL009_answer_1.png"
+      "./problems/LOCAL009_answer_1.png"
     ],
     "answerImage": "LOCAL009_answer_1.png"
   },
@@ -225,17 +225,17 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:28:59.441Z",
     "images": [
-      "LOCAL010_problem_1.png",
-      "LOCAL010_problem_2.png",
-      "LOCAL010_problem_3.png"
+      "./problems/LOCAL010_problem_1.png",
+      "./problems/LOCAL010_problem_2.png",
+      "./problems/LOCAL010_problem_3.png"
     ],
     "explanationImages": [
-      "LOCAL010_explanation_1.png",
-      "LOCAL010_explanation_2.png",
-      "LOCAL010_explanation_3.png"
+      "./problems/LOCAL010_explanation_1.png",
+      "./problems/LOCAL010_explanation_2.png",
+      "./problems/LOCAL010_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL010_answer_1.png"
+      "./problems/LOCAL010_answer_1.png"
     ],
     "answerImage": "LOCAL010_answer_1.png"
   },
@@ -251,23 +251,23 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:30:35.621Z",
     "images": [
-      "LOCAL011_problem_1.png",
-      "LOCAL011_problem_2.png",
-      "LOCAL011_problem_3.png",
-      "LOCAL011_problem_4.png",
-      "LOCAL011_problem_5.png"
+      "./problems/LOCAL011_problem_1.png",
+      "./problems/LOCAL011_problem_2.png",
+      "./problems/LOCAL011_problem_3.png",
+      "./problems/LOCAL011_problem_4.png",
+      "./problems/LOCAL011_problem_5.png"
     ],
     "explanationImages": [
-      "LOCAL011_explanation_1.png",
-      "LOCAL011_explanation_2.png",
-      "LOCAL011_explanation_3.png",
-      "LOCAL011_explanation_4.png",
-      "LOCAL011_explanation_5.png",
-      "LOCAL011_explanation_6.png",
-      "LOCAL011_explanation_7.png"
+      "./problems/LOCAL011_explanation_1.png",
+      "./problems/LOCAL011_explanation_2.png",
+      "./problems/LOCAL011_explanation_3.png",
+      "./problems/LOCAL011_explanation_4.png",
+      "./problems/LOCAL011_explanation_5.png",
+      "./problems/LOCAL011_explanation_6.png",
+      "./problems/LOCAL011_explanation_7.png"
     ],
     "answerImages": [
-      "LOCAL011_answer_1.png"
+      "./problems/LOCAL011_answer_1.png"
     ],
     "answerImage": "LOCAL011_answer_1.png"
   },
@@ -283,16 +283,16 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:32:43.159Z",
     "images": [
-      "LOCAL012_problem_1.png",
-      "LOCAL012_problem_2.png",
-      "LOCAL012_problem_3.png"
+      "./problems/LOCAL012_problem_1.png",
+      "./problems/LOCAL012_problem_2.png",
+      "./problems/LOCAL012_problem_3.png"
     ],
     "explanationImages": [
-      "LOCAL012_explanation_1.png",
-      "LOCAL012_explanation_2.png"
+      "./problems/LOCAL012_explanation_1.png",
+      "./problems/LOCAL012_explanation_2.png"
     ],
     "answerImages": [
-      "LOCAL012_answer_1.png"
+      "./problems/LOCAL012_answer_1.png"
     ],
     "answerImage": "LOCAL012_answer_1.png"
   },
@@ -308,17 +308,17 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:33:50.419Z",
     "images": [
-      "LOCAL013_problem_1.png",
-      "LOCAL013_problem_2.png",
-      "LOCAL013_problem_3.png"
+      "./problems/LOCAL013_problem_1.png",
+      "./problems/LOCAL013_problem_2.png",
+      "./problems/LOCAL013_problem_3.png"
     ],
     "explanationImages": [
-      "LOCAL013_explanation_1.png",
-      "LOCAL013_explanation_2.png",
-      "LOCAL013_explanation_3.png"
+      "./problems/LOCAL013_explanation_1.png",
+      "./problems/LOCAL013_explanation_2.png",
+      "./problems/LOCAL013_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL013_answer_1.png"
+      "./problems/LOCAL013_answer_1.png"
     ],
     "answerImage": "LOCAL013_answer_1.png"
   },
@@ -334,20 +334,20 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:35:05.813Z",
     "images": [
-      "LOCAL014_problem_1.png",
-      "LOCAL014_problem_2.png",
-      "LOCAL014_problem_3.png",
-      "LOCAL014_problem_4.png",
-      "LOCAL014_problem_5.png"
+      "./problems/LOCAL014_problem_1.png",
+      "./problems/LOCAL014_problem_2.png",
+      "./problems/LOCAL014_problem_3.png",
+      "./problems/LOCAL014_problem_4.png",
+      "./problems/LOCAL014_problem_5.png"
     ],
     "explanationImages": [
-      "LOCAL014_explanation_1.png",
-      "LOCAL014_explanation_2.png",
-      "LOCAL014_explanation_3.png",
-      "LOCAL014_explanation_4.png"
+      "./problems/LOCAL014_explanation_1.png",
+      "./problems/LOCAL014_explanation_2.png",
+      "./problems/LOCAL014_explanation_3.png",
+      "./problems/LOCAL014_explanation_4.png"
     ],
     "answerImages": [
-      "LOCAL014_answer_1.png"
+      "./problems/LOCAL014_answer_1.png"
     ],
     "answerImage": "LOCAL014_answer_1.png"
   },
@@ -363,16 +363,16 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:36:09.584Z",
     "images": [
-      "LOCAL015_problem_1.png",
-      "LOCAL015_problem_2.png"
+      "./problems/LOCAL015_problem_1.png",
+      "./problems/LOCAL015_problem_2.png"
     ],
     "explanationImages": [
-      "LOCAL015_explanation_1.png",
-      "LOCAL015_explanation_2.png",
-      "LOCAL015_explanation_3.png"
+      "./problems/LOCAL015_explanation_1.png",
+      "./problems/LOCAL015_explanation_2.png",
+      "./problems/LOCAL015_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL015_answer_1.png"
+      "./problems/LOCAL015_answer_1.png"
     ],
     "answerImage": "LOCAL015_answer_1.png"
   },
@@ -388,16 +388,16 @@
     "pageCount": "4",
     "createdAt": "2026-01-24T06:37:03.127Z",
     "images": [
-      "LOCAL016_problem_1.png",
-      "LOCAL016_problem_2.png"
+      "./problems/LOCAL016_problem_1.png",
+      "./problems/LOCAL016_problem_2.png"
     ],
     "explanationImages": [
-      "LOCAL016_explanation_1.png",
-      "LOCAL016_explanation_2.png",
-      "LOCAL016_explanation_3.png"
+      "./problems/LOCAL016_explanation_1.png",
+      "./problems/LOCAL016_explanation_2.png",
+      "./problems/LOCAL016_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL016_answer_1.png"
+      "./problems/LOCAL016_answer_1.png"
     ],
     "answerImage": "LOCAL016_answer_1.png"
   },
@@ -413,20 +413,20 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:38:25.941Z",
     "images": [
-      "LOCAL017_problem_1.png",
-      "LOCAL017_problem_2.png",
-      "LOCAL017_problem_3.png",
-      "LOCAL017_problem_4.png",
-      "LOCAL017_problem_5.png"
+      "./problems/LOCAL017_problem_1.png",
+      "./problems/LOCAL017_problem_2.png",
+      "./problems/LOCAL017_problem_3.png",
+      "./problems/LOCAL017_problem_4.png",
+      "./problems/LOCAL017_problem_5.png"
     ],
     "explanationImages": [
-      "LOCAL017_explanation_1.png",
-      "LOCAL017_explanation_2.png",
-      "LOCAL017_explanation_3.png",
-      "LOCAL017_explanation_4.png"
+      "./problems/LOCAL017_explanation_1.png",
+      "./problems/LOCAL017_explanation_2.png",
+      "./problems/LOCAL017_explanation_3.png",
+      "./problems/LOCAL017_explanation_4.png"
     ],
     "answerImages": [
-      "LOCAL017_answer_1.png"
+      "./problems/LOCAL017_answer_1.png"
     ],
     "answerImage": "LOCAL017_answer_1.png"
   },
@@ -442,19 +442,19 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:39:34.858Z",
     "images": [
-      "LOCAL018_problem_1.png",
-      "LOCAL018_problem_2.png",
-      "LOCAL018_problem_3.png"
+      "./problems/LOCAL018_problem_1.png",
+      "./problems/LOCAL018_problem_2.png",
+      "./problems/LOCAL018_problem_3.png"
     ],
     "explanationImages": [
-      "LOCAL018_explanation_1.png",
-      "LOCAL018_explanation_2.png",
-      "LOCAL018_explanation_3.png",
-      "LOCAL018_explanation_4.png",
-      "LOCAL018_explanation_5.png"
+      "./problems/LOCAL018_explanation_1.png",
+      "./problems/LOCAL018_explanation_2.png",
+      "./problems/LOCAL018_explanation_3.png",
+      "./problems/LOCAL018_explanation_4.png",
+      "./problems/LOCAL018_explanation_5.png"
     ],
     "answerImages": [
-      "LOCAL018_answer_1.png"
+      "./problems/LOCAL018_answer_1.png"
     ],
     "answerImage": "LOCAL018_answer_1.png"
   },
@@ -470,15 +470,15 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:41:54.849Z",
     "images": [
-      "LOCAL019_problem_1.png"
+      "./problems/LOCAL019_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL019_explanation_1.png",
-      "LOCAL019_explanation_2.png",
-      "LOCAL019_explanation_3.png"
+      "./problems/LOCAL019_explanation_1.png",
+      "./problems/LOCAL019_explanation_2.png",
+      "./problems/LOCAL019_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL019_answer_1.png"
+      "./problems/LOCAL019_answer_1.png"
     ],
     "answerImage": "LOCAL019_answer_1.png"
   },
@@ -494,15 +494,15 @@
     "pageCount": "1",
     "createdAt": "2026-01-24T06:43:06.069Z",
     "images": [
-      "LOCAL020_problem_1.png"
+      "./problems/LOCAL020_problem_1.png"
     ],
     "explanationImages": [
-      "LOCAL020_explanation_1.png",
-      "LOCAL020_explanation_2.png",
-      "LOCAL020_explanation_3.png"
+      "./problems/LOCAL020_explanation_1.png",
+      "./problems/LOCAL020_explanation_2.png",
+      "./problems/LOCAL020_explanation_3.png"
     ],
     "answerImages": [
-      "LOCAL020_answer_1.png"
+      "./problems/LOCAL020_answer_1.png"
     ],
     "answerImage": "LOCAL020_answer_1.png"
   }
