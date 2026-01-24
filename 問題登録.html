@@ -2306,81 +2306,109 @@ JSON以外のテキストは出力しないでください。`
                     settingsModal.close();
                 }
             });
-            // === Vercel用データ書き出し機能 ===
+            // === Vercel用データ書き出し機能 (フルエクスポート) ===
             async function exportForVercel() {
                 try {
+                    // 1. 読み込み用フォルダの確認 (Source)
                     if (!dirHandle) {
-                        alert('保存先フォルダが選択されていません。「設定」からフォルダを選択してください。');
+                        alert('まず「設定」から読み込み元のデータフォルダ（problemsフォルダがある場所）を選択してください。');
                         return;
                     }
 
-                    if (!confirm('現在のデータで Vercel 用の index.json を作成しますか？\n(既存の index.json は上書きされます)')) {
+                    if (!confirm('Vercel公開用のデータを書き出します。\n\n「OK」を押すとフォルダ選択画面が開きます。\nWebアプリのルートフォルダ（index.htmlがあるフォルダ）を選択してください。\n\n※index.jsonの作成と、problemsフォルダ内の画像のコピーを行います。')) {
                         return;
                     }
 
-                    // 1. 最新のデータを取得
+                    // 2. 書き出し先フォルダを選択 (Target)
+                    let exportDirHandle;
+                    try {
+                        exportDirHandle = await window.showDirectoryPicker({
+                            mode: 'readwrite',
+                            startIn: 'documents'
+                        });
+                    } catch (e) {
+                        return; // キャンセル
+                    }
+
+                    if (!exportDirHandle) return;
+
+                    // 3. 最新のデータを取得
                     const problems = await loadProblemsFromFileSystem();
                     if (problems.length === 0) {
                         alert('書き出すデータがありません。問題を登録してください。');
                         return;
                     }
 
-                    // 2. データ整形 (画像パスを相対パスに変換し、Blobを除外)
-                    const exportData = problems.map(p => {
-                        const copy = { ...p };
-                        // Blobなど不要なフィールドを削除
-                        delete copy.imageBlob;
-                        delete copy.problemBlobs; // 配列Blob
-                        delete copy.explanationBlob;
-                        delete copy.explanationBlobs; // 配列Blob
-                        delete copy.answerBlob;
-                        delete copy.answerBlobs; // 配列Blob
-
-                        // 画像パスを修正 ( ./problems/filename )
-                        // 問題画像
-                        if (copy.images && copy.images.length > 0) {
-                            copy.images = copy.images.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
-                        }
-                        // 解説画像
-                        if (copy.explanationImages && copy.explanationImages.length > 0) {
-                            copy.explanationImages = copy.explanationImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
-                        }
-                        // 解答画像
-                        if (copy.answerImages && copy.answerImages.length > 0) {
-                            copy.answerImages = copy.answerImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
-                        } else if (copy.answerImage) {
-                            // 旧形式互換
-                            const img = copy.answerImage;
-                            copy.answerImage = img.startsWith('./problems/') ? img : './problems/' + img;
-                        }
-
-                        return copy;
-                    });
-
-                    // 3. index.json として保存 (保存場所を選択させる)
-                    const jsonString = JSON.stringify(exportData, null, 2);
+                    // ローディング表示（簡易的）
+                    const btn = document.getElementById('exportVercelBtn');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span>⏳</span> 書き出し中...';
+                    btn.disabled = true;
 
                     try {
-                        const handle = await window.showSaveFilePicker({
-                            suggestedName: 'index.json',
-                            types: [{
-                                description: 'JSON File',
-                                accept: { 'application/json': ['.json'] },
-                            }],
+                        // 4. データ整形
+                        const exportData = problems.map(p => {
+                            const copy = { ...p };
+                            delete copy.imageBlob; delete copy.problemBlobs;
+                            delete copy.explanationBlob; delete copy.explanationBlobs;
+                            delete copy.answerBlob; delete copy.answerBlobs;
+
+                            // パス修正 ( ./problems/filename )
+                            if (copy.images) copy.images = copy.images.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
+                            if (copy.explanationImages) copy.explanationImages = copy.explanationImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
+                            if (copy.answerImages) copy.answerImages = copy.answerImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
+                            else if (copy.answerImage) copy.answerImage = copy.answerImage.startsWith('./problems/') ? copy.answerImage : './problems/' + copy.answerImage;
+                            return copy;
                         });
 
-                        const writable = await handle.createWritable();
+                        // 5. index.json として保存
+                        const jsonString = JSON.stringify(exportData, null, 2);
+                        const indexFileHandle = await exportDirHandle.getFileHandle('index.json', { create: true });
+                        const writable = await indexFileHandle.createWritable();
                         await writable.write(jsonString);
                         await writable.close();
 
-                        alert('書き出し完了！\n\n「' + handle.name + '」と同じ階層に index.html があることを確認してください。\nGitHubにプッシュすると反映されます。');
-                    } catch (cancelErr) {
-                        return; // キャンセル
+                        // 6. 画像ファイルのコピー (problemsフォルダ)
+                        // Targetのproblemsフォルダを作成
+                        const targetProblemsDir = await exportDirHandle.getDirectoryHandle('problems', { create: true });
+
+                        // Sourceのproblemsフォルダを取得
+                        const sourceProblemsDir = await dirHandle.getDirectoryHandle('problems');
+
+                        // 画像ファイルを列挙してコピー
+                        // (problems配列に含まれる画像ファイルだけをコピーするのが理想だが、
+                        //  今回は整合性を保つためソースのproblemsフォルダ内の全ファイルをコピーする仕様とする)
+                        //  -> と思ったが、ゴミファイルもコピーしてしまうので、必要なファイルだけコピーするほうが良いか？
+                        //  ユーザー要望は「その作業も」ということなので、シンプルにフォルダごと同期に近い形を想定。
+                        //  全ファイルコピーする。
+
+                        let copyCount = 0;
+                        for await (const [name, handle] of sourceProblemsDir.entries()) {
+                            if (handle.kind === 'file') {
+                                const file = await handle.getFile();
+                                // Targetに書き込み
+                                const targetFileHandle = await targetProblemsDir.getFileHandle(name, { create: true });
+                                const targetWritable = await targetFileHandle.createWritable();
+                                await targetWritable.write(file);
+                                await targetWritable.close();
+                                copyCount++;
+                            }
+                        }
+
+                        alert(`書き出し完了！\n\n・index.json を保存しました\n・${copyCount} 個の画像ファイルを problems フォルダにコピーしました\n\nGitHubにプッシュしてください。`);
+
+                    } catch (err) {
+                        throw err;
+                    } finally {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
                     }
 
                 } catch (e) {
                     console.error('Export Error:', e);
                     alert('書き出しに失敗しました: ' + e.message);
+                    const btn = document.getElementById('exportVercelBtn');
+                    if (btn) btn.disabled = false;
                 }
             }
 
