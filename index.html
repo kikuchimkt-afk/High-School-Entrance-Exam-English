@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -540,7 +540,7 @@
                 if (isFileSystemMode) return;
 
                 console.log('Attempting to load static index.json...');
-                const response = await fetch('./index.json');
+                const response = await fetch('./index.json?t=' + new Date().getTime());
 
                 if (!response.ok) {
                     console.warn('Static index.json not found or not accessible (Status:', response.status, ').');
@@ -732,7 +732,6 @@
             allGrades = new Set();
             allTestTypes = new Set();
             allYears = new Set();
-            allYears = new Set();
             allPrefectures = new Set();
 
             // 2. データの結合と再集計
@@ -744,7 +743,6 @@
                 splitAndAdd(doc.unit, allUnits);
                 splitAndAdd(doc.grade, allGrades);
                 if (doc.testType) allTestTypes.add(doc.testType);
-                if (doc.year) allYears.add(doc.year);
                 if (doc.year) allYears.add(doc.year);
 
                 // コメントから都道府県を抽出
@@ -861,6 +859,16 @@
                 splitAndAdd(doc.grade, allGrades);
                 if (doc.testType) allTestTypes.add(doc.testType);
                 if (doc.year) allYears.add(doc.year);
+
+                // コメントから都道府県を抽出
+                const comment = String(doc.comment || '');
+                if (comment) {
+                    for (const pref of PREFECTURES_LIST) {
+                        if (comment.includes(pref)) {
+                            allPrefectures.add(pref);
+                        }
+                    }
+                }
             });
 
             populateFilters('gradeFilters', allGrades);
@@ -1434,6 +1442,10 @@
                                 <span class="font-semibold text-gray-600">キーワード:</span>
                                 <p class="text-gray-800 mt-1 text-sm">${doc.keywords || 'N/A'}</p>
                             </div>
+                            <div>
+                                <span class="font-semibold text-gray-600">コメント:</span>
+                                <p class="text-gray-800 mt-1 text-sm whitespace-pre-wrap">${doc.comment || 'なし'}</p>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1474,6 +1486,10 @@
                         <div>
                             <span class="font-semibold text-gray-600">キーワード:</span>
                             <p class="text-gray-800 mt-1 text-sm">${doc.keywords || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-600">コメント:</span>
+                            <p class="text-gray-800 mt-1 text-sm whitespace-pre-wrap">${doc.comment || 'なし'}</p>
                         </div>
                     </div>
                 `;
