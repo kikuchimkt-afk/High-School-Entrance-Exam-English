@@ -220,14 +220,33 @@
             <!-- メタデータ入力フォーム -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
-                <!-- 出題年・問題種別 -->
-                <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 出題年・月・問題種別 -->
+                <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label for="yearSelect" class="block text-sm font-semibold mb-2 text-gray-700">出題年度</label>
                         <select id="yearSelect"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">選択</option>
                             <!-- 2020年度〜現在+1年度を動的に生成 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="monthSelect" class="block text-sm font-semibold mb-2 text-gray-700">出題月</label>
+                        <select id="monthSelect"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">選択</option>
+                            <option value="1">1月</option>
+                            <option value="2">2月</option>
+                            <option value="3">3月</option>
+                            <option value="4">4月</option>
+                            <option value="5">5月</option>
+                            <option value="6">6月</option>
+                            <option value="7">7月</option>
+                            <option value="8">8月</option>
+                            <option value="9">9月</option>
+                            <option value="10">10月</option>
+                            <option value="11">11月</option>
+                            <option value="12">12月</option>
                         </select>
                     </div>
                     <div>
@@ -742,12 +761,13 @@
                     // 問題画像
                     if (problem.images && problem.images.length > 0) {
                         const imageUrls = [];
-                        for (const imgName of problem.images) {
+                        for (const imgPath of problem.images) {
                             try {
+                                const imgName = imgPath.split('/').pop(); // パスが含まれている場合の対策
                                 const imgHandle = await problemsDir.getFileHandle(imgName);
                                 const imgFile = await imgHandle.getFile();
                                 imageUrls.push(URL.createObjectURL(imgFile));
-                            } catch { }
+                            } catch (e) { console.warn('Image load error:', imgPath, e); }
                         }
                         problem.images = imageUrls;
                     }
@@ -755,12 +775,13 @@
                     // 解説画像
                     if (problem.explanationImages && problem.explanationImages.length > 0) {
                         const expUrls = [];
-                        for (const imgName of problem.explanationImages) {
+                        for (const imgPath of problem.explanationImages) {
                             try {
+                                const imgName = imgPath.split('/').pop();
                                 const imgHandle = await problemsDir.getFileHandle(imgName);
                                 const imgFile = await imgHandle.getFile();
                                 expUrls.push(URL.createObjectURL(imgFile));
-                            } catch { }
+                            } catch (e) { console.warn('Exp image load error:', imgPath, e); }
                         }
                         problem.explanationImages = expUrls;
                     }
@@ -768,23 +789,25 @@
                     // 解答画像
                     if (problem.answerImages && problem.answerImages.length > 0) {
                         const ansUrls = [];
-                        for (const imgName of problem.answerImages) {
+                        for (const imgPath of problem.answerImages) {
                             try {
+                                const imgName = imgPath.split('/').pop();
                                 const imgHandle = await problemsDir.getFileHandle(imgName);
                                 const imgFile = await imgHandle.getFile();
                                 ansUrls.push(URL.createObjectURL(imgFile));
-                            } catch { }
+                            } catch (e) { console.warn('Ans image load error:', imgPath, e); }
                         }
                         problem.answerImages = ansUrls;
                         problem.answerImage = ansUrls[0]; // 互換性
                     } else if (problem.answerImage) {
                         try {
-                            const imgHandle = await problemsDir.getFileHandle(problem.answerImage);
+                            const imgName = problem.answerImage.split('/').pop();
+                            const imgHandle = await problemsDir.getFileHandle(imgName);
                             const imgFile = await imgHandle.getFile();
                             const url = URL.createObjectURL(imgFile);
                             problem.answerImage = url;
                             problem.answerImages = [url]; // 互換性
-                        } catch { }
+                        } catch (e) { console.warn('Ans image single load error:', problem.answerImage, e); }
                     }
                 }
 
@@ -2141,93 +2164,7 @@ JSON以外のテキストは出力しないでください。`
                 if (e.target.files[0]) handleAnswerImage(e.target.files[0]);
             });
 
-            // === Vercel用データ書き出し機能 ===
-            async function exportForVercel() {
-                try {
-                    if (!dirHandle) {
-                        alert('保存先フォルダが選択されていません。「設定」からフォルダを選択してください。');
-                        return;
-                    }
 
-                    if (!confirm('現在のデータで Vercel 用の index.json を作成しますか？\n(既存の index.json は上書きされます)')) {
-                        return;
-                    }
-
-                    // 1. 最新のデータを取得
-                    const problems = await loadProblemsFromFileSystem();
-                    if (problems.length === 0) {
-                        alert('書き出すデータがありません。問題を登録してください。');
-                        return;
-                    }
-
-                    // 2. データ整形 (画像パスを相対パスに変換し、Blobを除外)
-                    const exportData = problems.map(p => {
-                        const copy = { ...p };
-                        // Blobなど不要なフィールドを削除
-                        delete copy.imageBlob;
-                        delete copy.problemBlobs; // 配列Blob
-                        delete copy.explanationBlob;
-                        delete copy.explanationBlobs; // 配列Blob
-                        delete copy.answerBlob;
-                        delete copy.answerBlobs; // 配列Blob
-
-                        // 画像パスを修正 ( ./problems/filename )
-                        // 問題画像
-                        if (copy.images && copy.images.length > 0) {
-                            copy.images = copy.images.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
-                        }
-                        // 解説画像
-                        if (copy.explanationImages && copy.explanationImages.length > 0) {
-                            copy.explanationImages = copy.explanationImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
-                        }
-                        // 解答画像
-                        if (copy.answerImages && copy.answerImages.length > 0) {
-                            copy.answerImages = copy.answerImages.map(img => img.startsWith('./problems/') ? img : './problems/' + img);
-                        } else if (copy.answerImage) {
-                            // 旧形式互換
-                            const img = copy.answerImage;
-                            copy.answerImage = img.startsWith('./problems/') ? img : './problems/' + img;
-                        }
-
-                        return copy;
-                    });
-
-                    // 3. index.json として保存
-                    const jsonString = JSON.stringify(exportData, null, 2);
-                    const fileHandle = await dirHandle.getFileHandle('index.json', { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(jsonString);
-                    await writable.close();
-
-                    alert('書き出し完了！\n\nGitHubにプッシュすると、このデータがVercel上で公開されます。\n(反映には数分かかる場合があります)\n\n※検索ページ(index.html)側では MOCK_ENGLISH_DATA 変数を空配列 [] にし、Fetchで読み込むようにしてください。');
-
-                } catch (e) {
-                    console.error('Export Error:', e);
-                    alert('書き出しに失敗しました: ' + e.message);
-                }
-            }
-
-            // === ファイルシステムから全問題を読み込み (Export用) ===
-            async function loadProblemsFromFileSystem() {
-                try {
-                    // index.json から読み込むが、なければ空
-                    let problems = [];
-                    try {
-                        const indexFile = await dirHandle.getFileHandle('index.json');
-                        const file = await indexFile.getFile();
-                        const text = await file.text();
-                        problems = JSON.parse(text || '[]');
-                    } catch {
-                        // index.jsonがない場合は、実ファイル(problemsフォルダ)から再構築は難しいので、空スタート
-                        // (通常はアプリ上で管理してるので index.json は同期されてるはず)
-                        return [];
-                    }
-                    return problems;
-                } catch (e) {
-                    console.log('Error reading file system:', e);
-                    return [];
-                }
-            }
 
             answerDropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
